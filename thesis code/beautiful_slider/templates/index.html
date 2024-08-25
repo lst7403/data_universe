@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Sliders</title>
+    <style>
+        /* Custom styles for the slider */
+        input[type="range"] {
+            appearance: none; /* Remove default styling */
+            width: 100%; /* Full width */
+            height: 8px; /* Custom height */
+            background: transparent; /* Transparent to show the track */
+            border-radius: 2rem;
+            outline: none;
+        }
+
+        /* Custom styles for the track (the background of the slider) */
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, rgb(68, 68, 255), rgb(218, 218, 218), rgb(255, 75, 75)); /* Gradient background */
+            border-radius: 2rem;
+        }
+
+        /* Custom styles for the thumb (handle) */
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; /* Remove default styling */
+            width: 16px; /* Custom width */
+            height: 16px; /* Custom height */
+            background: #ffffff; /* Custom color */
+            cursor: pointer; /* Pointer cursor on hover */
+            border-radius: 50%; /* Rounded corners */
+            border: 1px solid rgb(116, 116, 116); /* Black outline */
+            margin-top: -4px; /* Adjust position to center */
+        }
+
+        /* Styles for the slider container and value display */
+        .slider-container {
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            align-items: flex-start; /* Align items to the start of the container */
+            width: 300px; /* Set a fixed width for the container (optional) */
+            margin-bottom: 20px; /* Space between sliders */
+        }
+
+        .line-container {
+            display: flex;
+            align-items: center; /* Align items vertically in the center */
+            width: 100%; /* Make the line container full width of its parent */
+            margin-bottom: 10px; /* Space below the line container */
+        }
+
+        .line-container p {
+            margin: 0; /* Remove default margin */
+            padding-right: 10px; /* Space between the text and the number input */
+        }
+
+        .manual-input {
+            width: 60px; /* Custom width for the input box */
+        }
+
+        .slider-value {
+            font-size: 16px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sliders-container">
+        {% for slider in sliders %}
+        <div class="slider-container" data-id="{{ slider.id }}">
+            <div class="line-container">
+                <p>Value {{ slider.id }}</p>
+                <input type="number" class="manual-input" min="{{ slider.min }}" max="{{ slider.max }}" value="{{ slider.value }}">
+            </div>
+            <input type="range" class="slider" min="{{ slider.min }}" max="{{ slider.max }}" value="{{ slider.value }}">
+        </div>
+        {% endfor %}
+    </div>
+    <button id="search-button">Search</button>
+
+    <script>
+        // Function to gather all slider values
+        function gatherSliderValues() {
+            const sliderValues = [];
+            document.querySelectorAll('.slider-container').forEach(container => {
+                const id = container.getAttribute('data-id');
+                const value = container.querySelector('.slider').value;
+                sliderValues.push({ id: id, value: value });
+            });
+            return sliderValues;
+        }
+
+        // Send the values to the backend
+        function sendValuesToBackend(sliderValues) {
+            fetch('/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(sliderValues)
+            })
+            .then(response => response.json());
+        }
+
+        // Select all slider containers
+        document.querySelectorAll('.slider-container').forEach(container => {
+            const slider = container.querySelector('.slider');
+            const manualInput = container.querySelector('.manual-input');
+
+            // Update the displayed value when the slider is moved
+            slider.addEventListener('input', function() {
+                manualInput.value = slider.value;
+            });
+
+            // Update the slider when the manual input is changed
+            manualInput.addEventListener('input', function() {
+                slider.value = manualInput.value;
+            });
+        });
+
+        // Handle button click
+        document.getElementById('search-button').addEventListener('click', function() {
+            const sliderValues = gatherSliderValues();
+            sendValuesToBackend(sliderValues);
+        });
+    </script>
+</body>
+</html>

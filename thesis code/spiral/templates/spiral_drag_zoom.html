@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Spiral with Drag and Zoom</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        svg {
+            border: 1px solid black;
+            overflow: hidden; /* Ensure content is clipped to the SVG viewport */
+        }
+    </style>
+</head>
+<body>
+    <svg width="600" height="600"></svg>
+    <script>
+        // Parameters for the spiral
+        const a = 20; // Controls the distance between the arms of the spiral
+        const b = 20; // Controls the rate of growth of the spiral
+
+        // Generate spiral data
+        const spiralData = [];
+        for (let t = 0; t < 20 * Math.PI; t += 0.1) {
+            const x = (a + b * t) * Math.cos(t);
+            const y = (a + b * t) * Math.sin(t);
+            spiralData.push([x + 300, y + 300]); // Center the spiral
+        }
+
+        // Create SVG and line
+        const svg = d3.select("svg");
+        const g = svg.append("g"); // Create a group element to handle transformations
+        const line = d3.line()
+            .x(d => d[0])
+            .y(d => d[1]);
+
+        g.append("path")
+            .data([spiralData])
+            .attr("d", line)
+            .attr("fill", "none")
+            .attr("stroke", "black")
+            .attr("stroke-width", 2);
+
+        // Zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.01, 5]) // Set zoom scale limits
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        // Apply zoom behavior to the SVG
+        svg.call(zoom);
+
+        // Drag behavior
+        const drag = d3.drag()
+            .on("start", (event) => {
+                // Capture initial drag positions
+                const transform = g.attr("transform");
+                const [prevX, prevY] = transform ? transform.match(/translate\(([^,]+), ([^)]*)\)/).slice(1).map(Number) : [0, 0];
+                xOffset = event.x - prevX;
+                yOffset = event.y - prevY;
+            })
+            .on("drag", (event) => {
+                // Calculate the new translation
+                const newX = event.x - xOffset;
+                const newY = event.y - yOffset;
+
+                // Apply the translation
+                g.attr("transform", `translate(${newX}, ${newY}) scale(${d3.zoomTransform(svg.node()).k})`);
+            });
+
+        svg.call(drag);
+    </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Universe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="icon" href="data:,"> <!-- disable favicon -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="search-section">
+        <div class="searching-area box">
+            <p class="header">Search</p>
+            <div id="slider-container"></div>
+            <button id="search-button">Search</button>
+        </div>
+        <div class="init-recommend-area box">
+            <p class="header">Initial Recommended Search</p>
+        </div>
+    </div>
+    
+    <div class="visual-section">
+        <div id="left-info-area">
+            <div class="box" id="tree-info">
+                <p class="header">Tree Diagram</p>
+                <svg id="tree-svg"></svg>
+            </div>
+            <div class="box" id="spiral-info">
+                <p class="header">Left Bottom</p>
+                <p id="left-bottom-node-details"></p>
+            </div>
+        </div>
+    
+        <svg id="graph-area"></svg>
+    
+        <div id="right-info-area">
+            <div class="box" id="super-cluster">
+                <p class="header">Super-cluster</p>
+                <p id="top-node-details"></p>
+            </div>
+            <div class="box" id="contra-cluster">
+                <p class="header">Contra-cluster</p>
+                <p id="left-node-details"></p>
+            </div>
+            <div class="box" id="similar-cluster">
+                <p class="header">Similar-cluster</p>
+                <p id="right-node-details"></p>
+            </div>
+            <div class="box" id="sub-cluster">
+                <p class="header">Sub-cluster</p>
+                <p id="bottom-node-details"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+</html>
