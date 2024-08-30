@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3 Spiral with Drag, Zoom, and Reset</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        svg {
+            border: 1px solid black;
+            overflow: hidden; /* Ensure content is clipped to the SVG viewport */
+        }
+        .reset-button {
+            cursor: pointer;
+            fill: #007bff;
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+    </style>
+</head>
+<body>
+    <svg width="600" height="600">
+        <!-- Reset button as an SVG element -->
+        <g class="reset-button" transform="translate(540, 10)">
+            <rect width="50" height="30" rx="5" ry="5"></rect>
+            <text x="25" y="15" text-anchor="middle" alignment-baseline="central" fill="#fff" font-size="12">Reset</text>
+        </g>
+    </svg>
+    <script>
+        // Parameters for the spiral
+        const a = 20; // Controls the distance between the arms of the spiral
+        const b = 20; // Controls the rate of growth of the spiral
+
+        // Generate spiral data
+        const spiralData = [];
+        for (let t = 0; t < 20 * Math.PI; t += 0.1) {
+            const x = (a + b * t) * Math.cos(t);
+            const y = (a + b * t) * Math.sin(t);
+            spiralData.push([x + 300, y + 300]); // Center the spiral
+        }
+
+        // Create SVG and line
+        const svg = d3.select("svg");
+        const g = svg.append("g"); // Create a group element to handle transformations
+        const line = d3.line()
+            .x(d => d[0])
+            .y(d => d[1]);
+
+        g.append("path")
+            .data([spiralData])
+            .attr("d", line)
+            .attr("fill", "none")
+            .attr("stroke", "black")
+            .attr("stroke-width", 2);
+
+        // Zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 2]) // Set zoom scale limits
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        // Drag behavior
+        const drag = d3.drag()
+            .on("start", (event) => {
+                // Capture initial translation offsets
+                const transform = d3.zoomTransform(svg.node());
+                xOffset = event.x - transform.x;
+                yOffset = event.y - transform.y;
+            })
+            .on("drag", (event) => {
+                // Apply the translation based on drag event
+                const transform = d3.zoomTransform(svg.node());
+                g.attr("transform", `translate(${event.x - xOffset}, ${event.y - yOffset}) scale(${transform.k})`);
+            });
+
+        svg.call(zoom).call(drag);
+
+        // SVG button click event
+        svg.select(".reset-button").on("click", () => {
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity);
+        });
+    </script>
+</body>
+</html>

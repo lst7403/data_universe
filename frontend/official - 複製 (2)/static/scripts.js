@@ -1,16 +1,15 @@
-// Synchronize Slider and Input
-function syncInputAndSlider(changedElementId, syncedElementId) {
-    const changedElement = document.getElementById(changedElementId);
-    const syncedElement = document.getElementById(syncedElementId);
-    if (syncedElement) {
-        syncedElement.value = changedElement.value;
-    }
-}
+const socket = io();
 
-// Fetch sliders from the server
-fetch('/sliders')
-    .then(response => response.json())
-    .then(sliders => {
+    // Synchronize Slider and Input
+    function syncInputAndSlider(changedElementId, syncedElementId) {
+        const changedElement = document.getElementById(changedElementId);
+        const syncedElement = document.getElementById(syncedElementId);
+        if (syncedElement) {
+            syncedElement.value = changedElement.value;
+        }
+    }
+
+    socket.on('sliders', sliders => {
         const container = document.getElementById('slider-container');
         container.innerHTML = ''; // Clear existing content
 
@@ -38,32 +37,18 @@ fetch('/sliders')
                 return acc;
             }, {});
 
-            fetch('/submit', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(sliderValues),
-            })
-            .then(response => response.json())
-            .then(data => console.log('Server response:', data))
-            .catch(error => console.error('Error sending slider values:', error));
+            socket.emit('submit', sliderValues);
         });
-    })
-    .catch(error => console.error('Error fetching slider data:', error));
+    });
 
-// Fetch sliders from the server
-fetch('/recom')
-    .then(response => response.json())
-    .then(sliders => {
-        const container = document.getElementById('recom-container');
+    // Handle server response after submitting slider values
+    socket.on('server_response', data => {
+        console.log('Server response:', data);
+    });
 
-// Fetch and render graph data
-const svg = d3.select("#graph-area");
-
-fetch('/graph-data')
-    .then(response => response.json())
-    .then(nodes => {
+    // Fetch and render graph data
+    socket.on('graph_data', nodes => {
+        const svg = d3.select("#graph-area");
         if (nodes.length > 1) {
             svg.selectAll("line")
                 .data(nodes.slice(1))
@@ -93,13 +78,10 @@ fetch('/graph-data')
             .attr("dx", 0)
             .attr("dy", ".35em")
             .text(d => d.id);
-    })
-    .catch(error => console.error('Error fetching graph data:', error));
+    });
 
-// Fetch and render tree data
-fetch('/tree-data')
-    .then(response => response.json())
-    .then(treeData => {
+    // Fetch and render tree data
+    socket.on('tree_data', treeData => {
         const treeSvg = d3.select("#tree-svg"),
             width = treeSvg.node().clientWidth,
             height = treeSvg.node().clientHeight;
@@ -137,5 +119,7 @@ fetch('/tree-data')
             .attr("class", "node-text")
             .attr("fill", "black")
             .text(d => d.data.name);
-    })
-    .catch(error => console.error('Error fetching tree data:', error));
+    });
+
+    // Request data from the server when the page loads
+    socket.emit('request_data');

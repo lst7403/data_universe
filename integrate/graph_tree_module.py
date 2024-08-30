@@ -1,4 +1,5 @@
-# data structure
+import numpy as np
+
 class node:
     def __init__(self, id = None, entity = None, center = None, index = None, up_lv = None, down_lv = None):
         self.id = id # unique id for node

@@ -52,12 +52,6 @@ fetch('/sliders')
     })
     .catch(error => console.error('Error fetching slider data:', error));
 
-// Fetch sliders from the server
-fetch('/recom')
-    .then(response => response.json())
-    .then(sliders => {
-        const container = document.getElementById('recom-container');
-
 // Fetch and render graph data
 const svg = d3.select("#graph-area");
 
