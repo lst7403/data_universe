@@ -63,8 +63,8 @@ fetch('/recom')
             const recomHTML = `
                 <div class="recom-item">
                     <label for="${recomDate.id}Recom">${recomDate.id}</label><br>
-                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 'max')">max: ${recomDate.max_val}</button>
-                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 'min')">min: ${recomDate.min_val}</button>
+                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 1)">max: ${recomDate.max_val}</button>
+                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 0)">min: ${recomDate.min_val}</button>
                 </div>
             `;
 

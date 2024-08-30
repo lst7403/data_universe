@@ -1,4 +1,19 @@
 import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+def k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
+  highest_score = 0
+  k_means_model = None
+
+  for ks in range(2, kmax+1):
+    kmeans = KMeans(n_clusters = ks, random_state=random_seed).fit(X)
+    cur_score = silhouette_score(X, kmeans.labels_, metric = 'euclidean')
+    if cur_score > highest_score:
+      highest_score = cur_score
+      k_means_model = kmeans
+
+  return k_means_model
 
 class node:
     def __init__(self, id = None, entity = None, center = None, index = None, up_lv = None, down_lv = None):
