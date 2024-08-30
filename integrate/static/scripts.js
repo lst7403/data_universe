@@ -83,7 +83,7 @@ function handleRecomClick(id, value) {
         body: JSON.stringify({ buttonId: id, val: value }),
     })
     .then(response => response.json())
-    .then(data => {('Success:', data);})
+    .then(data => {console.log('Success:', data);})
     .catch((error) => {console.error('Error:', error);});
 }
 
