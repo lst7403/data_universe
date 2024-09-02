@@ -7,6 +7,26 @@ function syncInputAndSlider(changedElementId, syncedElementId) {
     }
 }
 
+fun
+
+function postData(url = "", data = {}) {
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        return response.json();
+    })
+    .then(jsonData => {
+        console.log('Success:', jsonData);
+        // Handle the response data here
+    })
+    .catch(error => {
+        console.error('Fetch error', error);
+    });
+}
+
 // Fetch sliders from the server
 fetch('/sliders')
     .then(response => response.json())
@@ -52,44 +72,82 @@ fetch('/sliders')
     })
     .catch(error => console.error('Error fetching slider data:', error));
 
-// Fetch and render graph data
-const svg = d3.select("#graph-area");
-
-fetch('/graph-data')
+// Fetch sliders from the server
+fetch('/recom')
     .then(response => response.json())
-    .then(nodes => {
-        if (nodes.length > 1) {
-            svg.selectAll("line")
-                .data(nodes.slice(1))
-                .enter()
-                .append("line")
-                .attr("class", "link")
-                .attr("x1", d => nodes[0].x)
-                .attr("y1", d => nodes[0].y)
-                .attr("x2", d => d.x)
-                .attr("y2", d => d.y);
-        }
+    .then(recom => {
+        const container = document.getElementById('recom-container');
+        container.innerHTML = ''; // Clear existing content
 
-        const nodeGroups = svg.selectAll("g.node-group")
-            .data(nodes)
-            .enter()
-            .append("g")
-            .attr("class", "node-group")
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+        recom.forEach(recomDate => {
+            const recomHTML = `
+                <div class="recom-item">
+                    <label for="${recomDate.id}Recom">${recomDate.id}</label><br>
+                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 1)">max: ${recomDate.max_val}</button>
+                    <button type="button" onclick="handleRecomClick('${recomDate.i}', 0)">min: ${recomDate.min_val}</button>
+                </div>
+            `;
 
-        nodeGroups.append("circle")
-            .attr("class", "node")
-            .attr("r", 20)
-            .attr("fill", d => d.color);
-
-        nodeGroups.append("text")
-            .attr("class", "node-text")
-            .attr("dx", 0)
-            .attr("dy", ".35em")
-            .text(d => d.id);
+            container.insertAdjacentHTML('beforeend', recomHTML);
+        });
     })
-    .catch(error => console.error('Error fetching graph data:', error));
+    .catch(error => console.error('Error fetching recom data:', error));
 
+// Define the function to handle button clicks
+function handleRecomClick(id, value) {
+    fetch('/handle_recom', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ buttonId: id, val: value }),
+    })
+    .then(response => response.json())
+    .then(data => {console.log('Success:', data);})
+    .catch((error) => {console.error('Error:', error);});
+}
+
+// Fetch and render graph data
+function renderGraph() {
+    const svg = d3.select("#graph-area");
+
+    fetch('/graph-data')
+        .then(response => response.json())
+        .then(nodes => {
+            if (nodes.length > 1) {
+                svg.selectAll("line")
+                    .data(nodes.slice(1))
+                    .enter()
+                    .append("line")
+                    .attr("class", "link")
+                    .attr("x1", d => nodes[0].x)
+                    .attr("y1", d => nodes[0].y)
+                    .attr("x2", d => d.x)
+                    .attr("y2", d => d.y);
+            }
+
+            const nodeGroups = svg.selectAll("g.node-group")
+                .data(nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node-group")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            nodeGroups.append("circle")
+                .attr("class", "node")
+                .attr("r", 20)
+                .attr("fill", d => d.color);
+
+            nodeGroups.append("text")
+                .attr("class", "node-text")
+                .attr("dx", 0)
+                .attr("dy", ".35em")
+                .text(d => d.id);
+        })
+        .catch(error => console.error('Error fetching graph data:', error));
+
+}
+    
 // Fetch and render tree data
 fetch('/tree-data')
     .then(response => response.json())

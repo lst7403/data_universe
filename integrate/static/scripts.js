@@ -7,29 +7,38 @@ function syncInputAndSlider(changedElementId, syncedElementId) {
     }
 }
 
-fun
-
-function postData(url = "", data = {}) {
-    fetch(url, {
+function postData(url = "", data = {}, postID = "") {
+    return fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(response => {
-        return response.json();
-    })
+    .then(response => response.json())
     .then(jsonData => {
-        console.log('Success:', jsonData);
-        // Handle the response data here
+        console.log(`${postID} Post Success:`, jsonData);
+        return jsonData;  // Return the JSON data
     })
     .catch(error => {
-        console.error('Fetch error', error);
+        console.error(`${postID} Post Error:`, error);
+        throw error;  // Re-throw the error so it can be handled by the caller
+    });
+}
+
+function getData(url = "", getID = "") {
+    return fetch(url)
+    .then(response => response.json())
+    .then(jsonData => {
+        console.log(`${getID} Get Success:`, jsonData);
+        return jsonData;  // Return the JSON data
+    })
+    .catch(error => {
+        console.error(`${getID} Get Error:`, error);
+        throw error;  // Re-throw the error so it can be handled by the caller
     });
 }
 
 // Fetch sliders from the server
-fetch('/sliders')
-    .then(response => response.json())
+getData(url = '/sliders', getID = "get init slider")
     .then(sliders => {
         const container = document.getElementById('slider-container');
         container.innerHTML = ''; // Clear existing content
@@ -51,30 +60,24 @@ fetch('/sliders')
 
             container.insertAdjacentHTML('beforeend', sliderHTML);
         });
+    });
 
-        document.getElementById('search-button').addEventListener('click', () => {
-            const sliderValues = sliders.reduce((acc, sliderData) => {
-                acc[sliderData.id] = parseFloat(document.getElementById(`${sliderData.id}slider`).value);
-                return acc;
-            }, {});
 
-            fetch('/submit', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(sliderValues),
-            })
-            .then(response => response.json())
-            .then(data => console.log('Server response:', data))
-            .catch(error => console.error('Error sending slider values:', error));
-        });
-    })
-    .catch(error => console.error('Error fetching slider data:', error));
+function sendSliderValues() {
+    // Get all input elements of type range (sliders) within the container
+    const sliders = document.getElementById('slider-container').querySelectorAll('input[type="range"]');
+
+    // Use reduce to create a dictionary of slider IDs and their values
+    const sliderData = Array.from(sliders).reduce((acc, slider) => {
+        acc[slider.id] = slider.value;
+        return acc;
+    }, {});
+
+    postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
+};
 
 // Fetch sliders from the server
-fetch('/recom')
-    .then(response => response.json())
+getData(url = "recom", getID = "get init recom")
     .then(recom => {
         const container = document.getElementById('recom-container');
         container.innerHTML = ''; // Clear existing content
@@ -90,21 +93,12 @@ fetch('/recom')
 
             container.insertAdjacentHTML('beforeend', recomHTML);
         });
-    })
-    .catch(error => console.error('Error fetching recom data:', error));
+    });
 
 // Define the function to handle button clicks
 function handleRecomClick(id, value) {
-    fetch('/handle_recom', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ buttonId: id, val: value }),
-    })
-    .then(response => response.json())
+    postData('/handle_recom', { "buttonId": id, "val": value }, postID = "send recom click")
     .then(data => {console.log('Success:', data);})
-    .catch((error) => {console.error('Error:', error);});
 }
 
 // Fetch and render graph data
