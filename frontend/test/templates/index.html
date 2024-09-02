@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch POST Data</title>
+</head>
+<body>
+    <h1>Fetch POST Data</h1>
+    <button onclick="handleButtonClick()">Send Data</button>
+
+    <script>
+        // Function to send POST request
+        async function sendPostRequest(url, data) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                console.log('Success:', result);
+                return result;
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        }
+
+        // Function to handle button click
+        async function handleButtonClick() {
+            const data = {
+                key1: 'value1',
+                key2: 'value2'
+            };
+            
+            try {
+                const result = await sendPostRequest('/post-data', data);
+                // Store result in a variable or use it as needed
+                console.log('Received response:', result);
+                // Example: store result in a variable
+                let storedResult = result;
+                // Use storedResult as needed
+            } catch (error) {
+                console.error('Failed to send data:', error);
+            }
+        }
+
+        console.log("hi", storedResult)
+    </script>
+</body>
+</html>
