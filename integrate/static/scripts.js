@@ -37,7 +37,7 @@ function getData(url = "", getID = "") {
     });
 }
 
-// Fetch sliders from the server
+// get init slider and render
 getData(url = '/sliders', getID = "get init slider")
     .then(sliders => {
         const container = document.getElementById('slider-container');
@@ -61,22 +61,8 @@ getData(url = '/sliders', getID = "get init slider")
             container.insertAdjacentHTML('beforeend', sliderHTML);
         });
     });
-
-
-function sendSliderValues() {
-    // Get all input elements of type range (sliders) within the container
-    const sliders = document.getElementById('slider-container').querySelectorAll('input[type="range"]');
-
-    // Use reduce to create a dictionary of slider IDs and their values
-    const sliderData = Array.from(sliders).reduce((acc, slider) => {
-        acc[slider.id] = slider.value;
-        return acc;
-    }, {});
-
-    postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
-};
-
-// Fetch sliders from the server
+    
+// get init recom and render
 getData(url = "recom", getID = "get init recom")
     .then(recom => {
         const container = document.getElementById('recom-container');
@@ -94,8 +80,22 @@ getData(url = "recom", getID = "get init recom")
             container.insertAdjacentHTML('beforeend', recomHTML);
         });
     });
+    
+// post slider val
+function sendSliderValues() {
+    // Get all input elements of type range (sliders) within the container
+    const sliders = document.getElementById('slider-container').querySelectorAll('input[type="range"]');
 
-// Define the function to handle button clicks
+    // Use reduce to create a dictionary of slider IDs and their values
+    const sliderData = Array.from(sliders).reduce((acc, slider) => {
+        acc[slider.id] = slider.value;
+        return acc;
+    }, {});
+
+    postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
+};
+
+// func of recom button clicked
 function handleRecomClick(id, value) {
     postData('/handle_recom', { "buttonId": id, "val": value }, postID = "send recom click")
     .then(data => {console.log('Success:', data);})
