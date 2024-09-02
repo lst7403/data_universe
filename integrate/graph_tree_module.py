@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from collections import deque
 
 def k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
   highest_score = 0
@@ -26,10 +27,10 @@ class node:
 
 class sim:
     def l1(vector_1, vector_2):
-        return sum(abs(vector_1-vector_2))
+        return sum(abs(np.array(vector_1)-np.array(vector_2)))
 
     def l2(vector_1, vector_2):
-        return sum((vector_1-vector_2)**2)
+        return sum((np.array(vector_1)-np.array(vector_2))**2)
              
 
 # graph tree (cluster)
@@ -39,7 +40,6 @@ class graph_tree:
         self.X = X
         self.X_maxmin = X_maxmin
         self.min_cluster_size = min_cluster_size
-        self.searhing_query = searhing_query
         self.recom = recom # a list of node, [[attr 1 max node, attr 1 min node], [attr 2 max node, attr 2 min node]...]
         
     
@@ -51,29 +51,33 @@ class graph_tree:
         print("root node is created")
     
     def search(self, query_vector):
-        self.searhing_query = query_vector
-        cur = self.root
+        closest_node = self.root
+        queue = deque([self.root])
+        closest = sim.l1(self.root.center, query_vector)
         
-        while cur.down_lv:
-            cur_center_distance = sim.l2(query_vector, cur.center)
-            # print(cur_center_distance)
-
-            closest = cur_center_distance
-            closest_node_position = -1
-
-            for node in range(len(cur.down_lv)):
-                if sim.l2(query_vector, cur.down_lv[node].center) < closest:
-                    closest = sim.l2(query_vector, cur.down_lv[node].center)
-                    closest_node_position = node
-
-            if closest_node_position < 0:
-                break
+        while queue:
+            cur = queue.popleft()
+            print(f"{cur.id} is popped")
             
-            cur = cur.down_lv[closest_node_position]
+            if cur.down_lv:
+                for node in cur.down_lv:
+                    print(f"checking {node.id}")
+                    dist = sim.l1(node.center, query_vector)
+                    
+                    if dist < closest:
+                        closest_node = node
+                        closest = dist
+                        print(f"cur node: {closest_node.id}, dist: {closest}")
+                        queue.append(node)
+                    
+                    elif dist - sim.l1(node.center, self.X[node.index[-1]]) < closest:
+                        print(f"maybe")
+                        queue.append(node)
 
-        return cur
+                    print([n.id for n in queue])
         
-
+        return closest_node
+        
 
     def build_tree(self):
         
