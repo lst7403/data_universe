@@ -83,6 +83,8 @@ getData(url = "recom", getID = "get init recom")
     
 // post slider val
 function sendSliderValues() {
+    document.querySelector('.visual-section').scrollIntoView({ behavior: 'smooth' });
+
     // Get all input elements of type range (sliders) within the container
     const sliders = document.getElementById('slider-container').querySelectorAll('input[type="range"]');
 
@@ -93,20 +95,23 @@ function sendSliderValues() {
     }, {});
 
     postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
+        .then(renderGraph())
 };
 
 // func of recom button clicked
 function handleRecomClick(id, value) {
+    document.querySelector('.visual-section').scrollIntoView({ behavior: 'smooth' });
     postData('/handle_recom', { "buttonId": id, "val": value }, postID = "send recom click")
-    .then(data => {console.log('Success:', data);})
+        .then(renderGraph())
 }
 
 // Fetch and render graph data
 function renderGraph() {
     const svg = d3.select("#graph-area");
 
-    fetch('/graph-data')
-        .then(response => response.json())
+    svg.selectAll("*").remove();
+
+    getData(url = '/graph-data', getID = "get graph")
         .then(nodes => {
             if (nodes.length > 1) {
                 svg.selectAll("line")
@@ -139,8 +144,8 @@ function renderGraph() {
                 .text(d => d.id);
         })
         .catch(error => console.error('Error fetching graph data:', error));
-
 }
+renderGraph()
     
 // Fetch and render tree data
 fetch('/tree-data')
