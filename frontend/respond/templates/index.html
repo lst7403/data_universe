@@ -3,51 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Increment Integer with D3.js</title>
+    <title>D3.js Vertical Tree</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .node circle {
+            fill: steelblue;
+            stroke: black;
+            stroke-width: 3px;
+        }
+        .node text {
+            font: 12px sans-serif;
+            fill: black;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Increment Integer by 10</h1>
-    
-    <!-- Area 1 -->
-    <div class="area" id="area1">
-        <input type="number" id="inputValue1" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="1">Add 10</button>
-        <p>Updated Value: <span id="updatedValue1"></span></p>
-    </div>
 
-    <!-- Area 2 -->
-    <div class="area" id="area2">
-        <input type="number" id="inputValue2" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="2">Add 10</button>
-        <p>Updated Value: <span id="updatedValue2"></span></p>
-    </div>
+<h2>D3.js Vertical Tree</h2>
+<!-- Placeholder for the tree -->
+<div id="tree"></div>
 
-    <!-- Area 3 -->
-    <div class="area" id="area3">
-        <input type="number" id="inputValue3" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="3">Add 10</button>
-        <p>Updated Value: <span id="updatedValue3"></span></p>
-    </div>
-    
-    <script>
-        d3.selectAll('.incrementButton').on('click', function() {
-            const target = d3.select(this).attr('data-target');
-            const inputValue = d3.select('#inputValue' + target).property('value');
+<script>
+    // Fetch tree data from Flask
+    fetch('/data')
+    .then(response => response.json())
+    .then(data => {
+        // Set up dimensions
+        const width = 500;
+        const height = 500;
 
-            fetch('/increment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: 'value=' + encodeURIComponent(inputValue)
-            })
-            .then(response => response.text())
-            .then(data => {
-                d3.select('#updatedValue' + target).text(data);
-            })
-            .catch(error => console.error('Error:', error));
-        });
-    </script>
+        // Set up the D3 tree layout
+        const treeLayout = d3.tree().size([height-150, width]);
+
+        // Create an SVG container
+        const svg = d3.select("#tree").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(40,0)");
+
+        // Convert data into a hierarchy
+        const root = d3.hierarchy(data);
+
+        // Generate the tree layout
+        treeLayout(root);
+
+        // Links between nodes
+        const link = svg.selectAll(".link")
+            .data(root.links())
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d3.linkVertical()
+                .x(d => d.x)
+                .y(d => d.y)
+            );
+
+        // Nodes
+        const node = svg.selectAll(".node")
+            .data(root.descendants())
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        // Append circles to the nodes
+        node.append("circle")
+            .attr("r", 5);
+
+        // Append labels to the nodes
+        node.append("text")
+            .attr("dy", 3)
+            .attr("x", d => d.children ? -8 : 8)
+            .style("text-anchor", d => d.children ? "end" : "start")
+            .text(d => d.data.name);
+    });
+</script>
+
 </body>
 </html>

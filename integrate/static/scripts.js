@@ -112,21 +112,21 @@ function renderGraph() {
     svg.selectAll("*").remove();
 
     getData(url = '/graph-data', getID = "get graph")
-        .then(nodes => {
-            if (nodes.length > 1) {
+        .then(data => {
+            if (data.length > 1) {
                 svg.selectAll("line")
-                    .data(nodes.slice(1))
+                    .data(data.slice(1))
                     .enter()
                     .append("line")
                     .attr("class", "link")
-                    .attr("x1", d => nodes[0].x)
-                    .attr("y1", d => nodes[0].y)
+                    .attr("x1", d => data[0].x)
+                    .attr("y1", d => data[0].y)
                     .attr("x2", d => d.x)
                     .attr("y2", d => d.y);
             }
 
             const nodeGroups = svg.selectAll("g.node-group")
-                .data(nodes)
+                .data(data)
                 .enter()
                 .append("g")
                 .attr("class", "node-group")
@@ -142,51 +142,55 @@ function renderGraph() {
                 .attr("dx", 0)
                 .attr("dy", ".35em")
                 .text(d => d.id);
-        })
-        .catch(error => console.error('Error fetching graph data:', error));
+        });
 }
 renderGraph()
     
-// Fetch and render tree data
-fetch('/tree-data')
-    .then(response => response.json())
-    .then(treeData => {
-        const treeSvg = d3.select("#tree-svg"),
-            width = treeSvg.node().clientWidth,
-            height = treeSvg.node().clientHeight;
+function renderTree() {
+    const width = 400;
+    const height = 400;
 
-        const treeLayout = d3.tree().size([height - 160, width - 160]);
+    const svg = d3.select("#tree-svg").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", "translate(40,40)");
 
-        const root = d3.hierarchy(treeData);
-        treeLayout(root);
+    svg.selectAll("*").remove();
 
-        const g = treeSvg.append("g")
-            .attr("transform", `translate(${width/4} ,10)`);
+    // Assuming getData is defined elsewhere and works properly
+    getData(url = '/tree-data', getID = "get tree")
+        .then(data => {
+            const treeLayout = d3.tree().size([height - 150, width]);
 
-        g.selectAll(".link")
-            .data(root.links())
-            .enter()
-            .append("line")
-            .attr("class", "link")
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y)
-            .attr("stroke", "#ccc")
-            .attr("stroke-width", 2);
+            const root = d3.hierarchy(data);
+            treeLayout(root);
 
-        const node = g.selectAll(".node")
-            .data(root.descendants())
-            .enter()
-            .append("g")
-            .attr("class", "node")
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+            // Styling and adding links between nodes
+            const link = svg.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y))
 
-        node.append("text")
-            .attr("dx", 0)
-            .attr("dy", ".35em")
-            .attr("class", "node-text")
-            .attr("fill", "black")
-            .text(d => d.data.name);
-    })
-    .catch(error => console.error('Error fetching tree data:', error));
+            // Nodes
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            node.append("circle")
+                .attr("r", 5)
+                .attr("fill", "steelblue");  // Blue color for nodes
+
+            node.append("text")
+                .attr("dy", 3)
+                .attr("x", d => d.children ? -8 : 8)
+                .style("text-anchor", d => d.children ? "end" : "start")
+                .text(d => d.data.name);
+        });
+}
+renderTree();
