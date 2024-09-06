@@ -1,0 +1,81 @@
+/* General styles */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.box {
+    border: 1px solid #ccc;
+    overflow-y: auto;
+}
+
+/* Section styles */
+.search-section, .visual-section {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    border: 1px solid #ccc;
+}
+
+/* Search area */
+.searching-area {
+    border: 1px solid #ccc;
+    height: 100vh;
+    width: 50vw;
+}
+
+.init-recom-area {
+    height: 100vh;
+    width: 50vw;
+}
+
+/* Visual area */
+/* Left info area */
+#left-info-area {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    width: 30vw;
+    height: 100vh;
+}
+
+#tree-svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Middle graph area */
+#graph-area {
+    border: 1px solid #ccc;
+    height: 100vh;
+    width: 40vw;
+}
+
+/* Right info area */
+#right-info-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 30vw;
+    height: 100vh;
+}
+
+.header {
+    margin: 5px;
+}
+
+.node {
+    cursor: pointer;
+}
+
+.link {
+    stroke: gray;
+    stroke-width: 2px;
+    fill: none;
+}
+
+.node-text {
+    fill: black;
+    font-size: 12px;
+    text-anchor: middle;
+}
