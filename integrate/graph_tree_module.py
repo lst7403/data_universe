@@ -4,6 +4,8 @@ from sklearn.metrics import silhouette_score
 from collections import deque
 import bisect
 
+__all__ = ["Node", "calculation", "graph_tree"]
+
 def _k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
   highest_score = 0
   k_means_model = None
@@ -26,12 +28,21 @@ class Node:
         self.up_lv = up_lv # super-cluster (node)
         self.down_lv = down_lv # sub-cluster (lsit of node)
 
-class sim:
+class calculation:
     def l1(vector_1, vector_2):
         return sum(abs(np.array(vector_1)-np.array(vector_2)))
 
     def l2(vector_1, vector_2):
         return sum((np.array(vector_1)-np.array(vector_2))**2)
+    
+    def reflection(self, vector, reflection_vector):
+        return 2*reflection_vector - vector
+    
+    def translate_to_norm_vector(original_vector, max, min):
+        return (original_vector - min)/(max - min)
+    
+    def sort_dict():
+        pass
              
 
 # graph tree (cluster)
@@ -51,20 +62,20 @@ class graph_tree:
         self.root = Node(id=0, entity=sorted(list(zip(self.attr_name, init_center))), center=init_center, index=init_idx[np.argsort(np.sum(abs(X-init_center), axis=1))])
         del (init_center, init_idx)
         print("root node is created")
-    
-    def translate_to_norm_vector(self, original_vector):
-        return (original_vector - self.X_maxmin[1])/(self.X_maxmin[0] - self.X_maxmin[1])
 
+
+
+    ####################################### search funtion area
     def search(self, q_vector):
-        q_vector = self.translate_to_norm_vector(q_vector)
+        q_vector = calculation.translate_to_norm_vector(q_vector, max=self.X_maxmin[0], min=self.X_maxmin[1])
         self.q_vector = q_vector
         closest_node = self.root
         queue = deque([self.root])
-        closest = sim.l1(self.root.center, q_vector)
+        closest = calculation.l1(self.root.center, q_vector)
         
         while queue:
             cur = queue.popleft()
-            dist = sim.l1(cur.center, q_vector)
+            dist = calculation.l1(cur.center, q_vector)
             # print(f"checking {cur.id}, dist: {dist}")
             
             if dist < closest:
@@ -73,7 +84,7 @@ class graph_tree:
                 # print(f"cur node: {closest_node.id}, closest: {closest}")
                 queue.extend(cur.down_lv if cur.down_lv else [])
             
-            elif dist - sim.l1(cur.center, self.X[cur.index[-1]]) < closest:
+            elif dist - calculation.l1(cur.center, self.X[cur.index[-1]]) < closest:
                 # print(f"{cur.id} potential")
                 queue.extend(cur.down_lv if cur.down_lv else [])
             else:
@@ -82,11 +93,96 @@ class graph_tree:
 
             # print([n.id for n in queue], "\n")
 
-        self.get_suround_cluster(closest_node, q_vector)
+        self.cur = closest_node
 
         return closest_node
+    
+    def reflection_search(self, search_vector, node, degree=1, k=10):
+        reflection_node = node
+        for i in range(degree):
+            if reflection_node.up_lv:
+                reflection_node = reflection_node.up_lv
+            else:
+                break
         
+        reflected_vector = calculation.reflection(search_vector, reflection_node.center)
+        print(reflected_vector)
+        knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
 
+        belong_node = None
+        # for node in reflection_node.down_lv
+
+        return [belong_node, reflected_vector, knn_res]
+    
+    # reflection_search_helper
+    def _get_closest_node_within_lv(self, node, reflected_vector, lv=float("inf"), mode="lv"):
+        if mode == "lv":
+            sorted_node = node
+            sorted_dist = float("inf")
+        elif mode == "leaf":
+            sorted_node = []
+            sorted_dist = []
+
+        queue = deque([node])
+        
+        lv_counter = 0
+
+        while lv_counter < lv:
+            if not queue:
+                break
+
+            size = len(queue)
+            for _ in range(size):
+                cur = queue.popleft()
+                if not(cur.down_lv) or lv_counter==lv:
+                    cur_dist = calculation.l1(reflected_vector, cur.center)
+
+                    if mode == "one":
+                        if cur_dist < sorted_dist:
+                            sorted_node = cur
+                            sorted_dist = cur_dist
+
+                    elif mode == "leaf":
+                        position = bisect.bisect_left(sorted_dist, cur_dist)
+                        sorted_dist.insert(position, cur_dist)
+                        sorted_node.insert(position, cur)
+
+                else:
+                    queue.extend(cur.down_lv)
+
+                    
+            lv_counter+=1
+
+        return sorted_node
+        
+    def fast_knn(self, vector, node, k=10):
+        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node, mode="leaf")
+        # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
+        sorted_knn_val = [float("inf") for i in range(k)]
+        sorted_knn_res = [None for i in range(k)]
+
+        for node in sorted_node_to_vector:
+            # print(f"checking {node.id}")
+            test = calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]])
+            # print(f"potential: {test}, far of knn: {sorted_knn_val[-1]}")
+            if calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
+                for index in node.index:
+                    dist = calculation.l1(vector, self.X[index])
+                    if dist < sorted_knn_val[-1]:
+                        # print(f"add dist {dist} and data {index}")
+                        sorted_knn_val.pop()
+                        sorted_knn_res.pop()
+                        position = bisect.bisect_left(sorted_knn_val, dist)
+                        sorted_knn_val.insert(position, dist)
+                        sorted_knn_res.insert(position, index)
+                        # print("update", sorted_knn_val, "\n", sorted_knn_res)
+            else:
+                # print("early break of knn")
+                break
+
+        return sorted_knn_res
+        
+# tree building area
     def build_tree(self):
         recom_max = self.root.center.copy()
         recom_min = self.root.center.copy()
@@ -130,7 +226,7 @@ class graph_tree:
                     #cal the distance between each data to coresponding center
                     distance_to_self_center = []
                     for i in range(len(cur_X)):
-                        distance_to_self_center.append(sim.l1(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]))
+                        distance_to_self_center.append(calculation.l1(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]))
                     
                     sorted_indices = np.argsort(np.array(distance_to_self_center))
                     sorted_index = cur.index[sorted_indices]
@@ -139,7 +235,7 @@ class graph_tree:
                     for i in range(k_means_model.n_clusters):
                         new_down_lv[i].index = sorted_index[np.where(sorted_labels == i)[0]]
 
-                    new_down_lv.sort(key=lambda x: sim.l1(x.center, cur.center))
+                    new_down_lv.sort(key=lambda x: calculation.l1(x.center, cur.center))
                     cur.down_lv = new_down_lv
                     
                     queue.extend(new_down_lv)
@@ -166,6 +262,7 @@ class graph_tree:
 
         return 0
     
+    # check tree area
     def print_tree(self, simple=1):
         queue = [self.root]
         lv = 0
@@ -180,70 +277,6 @@ class graph_tree:
             queue = new_queue
             lv += 1
     
-    def _reflection(self, vector, reflection_vector):
-        print(vector, reflection_vector)
-        return 2*reflection_vector - vector
-    
-    def _get_sorted_leaf_node_dfs(self, vector, node):
-        queue = deque([node])
-        sorted_val = []
-        sorted_leaf_nodes = []
-        
-        while queue:
-            node = queue.popleft()
-            dist = sim.l1(node.center, vector)
-            # print(f"checking {node.id}, dist: {dist}")
-            
-            # Check if it's a leaf node
-            if node.down_lv:
-                queue.extend(node.down_lv)
-                # print("queue: ", [n.id for n in queue])
-            else:
-                position = bisect.bisect_left(sorted_val, dist)
-                sorted_val.insert(position, dist)
-                sorted_leaf_nodes.insert(position, node)
-                # print("sorted node: ",sorted_val,"\n", [n.id for n in sorted_leaf_nodes])
-
-        return sorted_leaf_nodes
-        
-
-    def _fast_knn(self, vector, node, k=10):
-        sorted_node_to_vector = self._get_sorted_leaf_node_dfs(vector, node)
-        # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
-        sorted_knn_val = [float("inf") for i in range(k)]
-        sorted_knn_res = [None for i in range(k)]
-
-        for node in sorted_node_to_vector:
-            # print(f"checking {node.id}")
-            test = sim.l1(node.center, vector) - sim.l1(node.center, self.X[node.index[-1]])
-            # print(f"potential: {test}, far of knn: {sorted_knn_val[-1]}")
-            if sim.l1(node.center, vector) - sim.l1(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
-                for index in node.index:
-                    dist = sim.l1(vector, self.X[index])
-                    if dist < sorted_knn_val[-1]:
-                        # print(f"add dist {dist} and data {index}")
-                        sorted_knn_val.pop()
-                        sorted_knn_res.pop()
-                        position = bisect.bisect_left(sorted_knn_val, dist)
-                        sorted_knn_val.insert(position, dist)
-                        sorted_knn_res.insert(position, index)
-                        # print("update", sorted_knn_val, "\n", sorted_knn_res)
-            else:
-                # print("early break of knn")
-                break
-
-        return sorted_knn_res
-    
-    def reflection_search(self, search_vector, node, degree=1, k=10):
-        reflection_node = node
-        for i in range(degree):
-            if reflection_node.up_lv:
-                reflection_node = reflection_node.up_lv
-            else:
-                break
-        
-        reflected_vector = self._reflection(search_vector, reflection_node.center)
-        return [reflection_node, self._fast_knn(reflected_vector, reflection_node, k=k)]
 
     def get_suround_cluster(self, node, query_vector=None):
         if query_vector is None:
@@ -259,8 +292,8 @@ class graph_tree:
         c1 = self.reflection_search(query_vector, node, degree=1)
         c2 = self.reflection_search(query_vector, node, degree=2)
         contra_cluster = [
-            Node(id=-1, entity=self._reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
-            Node(id=-2, entity=self._reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
+            Node(id=-1, entity=calculation.reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
+            Node(id=-2, entity=calculation.reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
         ]
         res = {
             "cur_cluster": node,
@@ -273,3 +306,5 @@ class graph_tree:
         self.status = res
         
         return res
+
+
