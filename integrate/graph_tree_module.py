@@ -20,7 +20,7 @@ def _k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
   return k_means_model
 
 class Node:
-    def __init__(self, id = None, entity = None, center = None, index = None, up_lv = None, down_lv = None):
+    def __init__(self, id = None, entity = None, center = None, index = None, up_lv = None, down_lv = []):
         self.id = id # unique id for node
         self.entity = entity # sorted center by value with column name
         self.center = center # cluster center (vector)
@@ -47,164 +47,47 @@ class calculation:
 
 # graph tree (cluster)
 class graph_tree:
-    def __init__(self, attr_name, X, X_maxmin, min_cluster_size):
+    def __init__(self, attr_name, X, X_maxmin):
+        #store necessary val
         self.attr_name = attr_name
         self.X = X
         self.X_maxmin = X_maxmin
-        self.min_cluster_size = min_cluster_size
+
+        # init para for storing
         self.recom = None # a list of node, [[attr 1 max node, attr 1 min node], [attr 2 max node, attr 2 min node]...]
-        self.q_vector = None # search query
+        self.q_norm_vector = None # search query
         self.status = None # current status record of clusters
             
+
+    ############################ tree building area
+    def build_tree(self, min_threshold_for_clustering):
+
         # create root node
-        init_center = np.mean(X, axis=0)
-        init_idx = np.array([i for i in range(len(X))])
-        self.root = Node(id=0, entity=sorted(list(zip(self.attr_name, init_center))), center=init_center, index=init_idx[np.argsort(np.sum(abs(X-init_center), axis=1))])
-        del (init_center, init_idx)
-        print("root node is created")
+        root_center = np.mean(self.X, axis=0)
+        init_idx = np.array([i for i in range(len(self.X))])
+        root_node = Node(id=0, entity=sorted(list(zip(self.attr_name, root_center))), center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))])
+        self.root = root_node
 
-
-
-    ####################################### search funtion area
-    def search(self, q_vector):
-        q_vector = calculation.translate_to_norm_vector(q_vector, max=self.X_maxmin[0], min=self.X_maxmin[1])
-        self.q_vector = q_vector
-        closest_node = self.root
-        queue = deque([self.root])
-        closest = calculation.l1(self.root.center, q_vector)
+        recom_max = root_center.copy()
+        recom_min = root_center.copy()
+        recom = [[root_node, root_node] for _ in range(len(self.attr_name))]
         
-        while queue:
-            cur = queue.popleft()
-            dist = calculation.l1(cur.center, q_vector)
-            # print(f"checking {cur.id}, dist: {dist}")
-            
-            if dist < closest:
-                closest_node = cur
-                closest = dist
-                # print(f"cur node: {closest_node.id}, closest: {closest}")
-                queue.extend(cur.down_lv if cur.down_lv else [])
-            
-            elif dist - calculation.l1(cur.center, self.X[cur.index[-1]]) < closest:
-                # print(f"{cur.id} potential")
-                queue.extend(cur.down_lv if cur.down_lv else [])
-            else:
-                continue
-                # print(f"{cur.id} puned")
-
-            # print([n.id for n in queue], "\n")
-
-        self.cur = closest_node
-
-        return closest_node
-    
-    def reflection_search(self, search_vector, node, degree=1, k=10):
-        reflection_node = node
-        for i in range(degree):
-            if reflection_node.up_lv:
-                reflection_node = reflection_node.up_lv
-            else:
-                break
-        
-        reflected_vector = calculation.reflection(search_vector, reflection_node.center)
-        print(reflected_vector)
-        knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
-
-        belong_node = None
-        # for node in reflection_node.down_lv
-
-        return [belong_node, reflected_vector, knn_res]
-    
-    # reflection_search_helper
-    def _get_closest_node_within_lv(self, node, reflected_vector, lv=float("inf"), mode="lv"):
-        if mode == "lv":
-            sorted_node = node
-            sorted_dist = float("inf")
-        elif mode == "leaf":
-            sorted_node = []
-            sorted_dist = []
-
-        queue = deque([node])
-        
-        lv_counter = 0
-
-        while lv_counter < lv:
-            if not queue:
-                break
-
-            size = len(queue)
-            for _ in range(size):
-                cur = queue.popleft()
-                if not(cur.down_lv) or lv_counter==lv:
-                    cur_dist = calculation.l1(reflected_vector, cur.center)
-
-                    if mode == "one":
-                        if cur_dist < sorted_dist:
-                            sorted_node = cur
-                            sorted_dist = cur_dist
-
-                    elif mode == "leaf":
-                        position = bisect.bisect_left(sorted_dist, cur_dist)
-                        sorted_dist.insert(position, cur_dist)
-                        sorted_node.insert(position, cur)
-
-                else:
-                    queue.extend(cur.down_lv)
-
-                    
-            lv_counter+=1
-
-        return sorted_node
-        
-    def fast_knn(self, vector, node, k=10):
-        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node, mode="leaf")
-        # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
-        sorted_knn_val = [float("inf") for i in range(k)]
-        sorted_knn_res = [None for i in range(k)]
-
-        for node in sorted_node_to_vector:
-            # print(f"checking {node.id}")
-            test = calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]])
-            # print(f"potential: {test}, far of knn: {sorted_knn_val[-1]}")
-            if calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
-                for index in node.index:
-                    dist = calculation.l1(vector, self.X[index])
-                    if dist < sorted_knn_val[-1]:
-                        # print(f"add dist {dist} and data {index}")
-                        sorted_knn_val.pop()
-                        sorted_knn_res.pop()
-                        position = bisect.bisect_left(sorted_knn_val, dist)
-                        sorted_knn_val.insert(position, dist)
-                        sorted_knn_res.insert(position, index)
-                        # print("update", sorted_knn_val, "\n", sorted_knn_res)
-            else:
-                # print("early break of knn")
-                break
-
-        return sorted_knn_res
-        
-# tree building area
-    def build_tree(self):
-        recom_max = self.root.center.copy()
-        recom_min = self.root.center.copy()
-        recom = [[self.root, self.root] for _ in range(len(self.attr_name))]
-        print(recom_max, recom_min, recom)
-        
-        queue = deque([self.root])
+        queue = deque([root_node])
         
         counting_id = 1
         lv = 0
 
         while queue:
             size = len(queue)
-            print("queue", size, queue)
             print(f"\n---------------------------------- level {lv} no of node {size} ----------------------------------------")
-            for node_in_this_lv in range(size):
-                print(f"\nhandling node {node_in_this_lv}, info:")
+            print("queue: ", [n.id for n in queue])
+
+            for _ in range(size):
                 # k means required parameter and train the model
                 cur = queue.popleft() # get cur node
-                print(f"cur node {cur}")
+                print(f"cur node {cur.id}")
                 print(f"no. of cur node data {len(cur.index)}")
-                if len(cur.index) > self.min_cluster_size:
+                if len(cur.index) > min_threshold_for_clustering:
                     cur_X = self.X[cur.index] # get cur data by index
                     k_means_model = _k_means_model_with_best_sil_score(cur_X) # get kmeans model
                     print(f"optimal K {k_means_model.n_clusters}\n")
@@ -247,13 +130,11 @@ class graph_tree:
                         if cur.center[i] >= recom_max[i]:
                             recom_max[i] = cur.center[i]
                             recom[i][0] = cur
-                            print(f"in {self.attr_name[i]} max")
-                            print(recom)
+                            print(f"added to {self.attr_name[i]} max")
                         elif cur.center[i] <= recom_min[i]:
                             recom_min[i] = cur.center[i]
                             recom[i][1] = cur
-                            print(f"in {self.attr_name[i]} min")
-                            print(recom)
+                            print(f"added to {self.attr_name[i]} min")
                     
 
             lv += 1
@@ -261,23 +142,147 @@ class graph_tree:
         self.recom = recom
 
         return 0
-    
-    # check tree area
-    def print_tree(self, simple=1):
-        queue = [self.root]
-        lv = 0
-        while queue:
-            print(f"---------- lv: {lv}, node num.: {len(queue)} ----------")
-            new_queue = []
-            for n in queue:
-                if simple == 0:
-                    print(n.id)
-                if n.down_lv:
-                    new_queue += n.down_lv
-            queue = new_queue
-            lv += 1
-    
 
+    ####################################### search funtion area
+    def search(self, q_vector):
+        q_norm_vector = calculation.translate_to_norm_vector(q_vector, max=self.X_maxmin[0], min=self.X_maxmin[1])
+        self.q_norm_vector = q_norm_vector
+        closest_node = self.root
+        queue = deque([self.root])
+        closest = calculation.l1(self.root.center, q_norm_vector)
+        
+        while queue:
+            cur = queue.popleft()
+            dist = calculation.l1(cur.center, q_norm_vector)
+            # print(f"checking {cur.id}, dist: {dist}")
+            
+            if dist < closest:
+                closest_node = cur
+                closest = dist
+                # print(f"cur node: {closest_node.id}, closest: {closest}")
+                queue.extend(cur.down_lv)
+            
+            elif dist - calculation.l1(cur.center, self.X[cur.index[-1]]) < closest:
+                # print(f"{cur.id} potential")
+                queue.extend(cur.down_lv)
+            else:
+                continue
+                # print(f"{cur.id} puned")
+
+            # print([n.id for n in queue], "\n")
+
+        self.cur = closest_node
+
+        return closest_node
+    
+    def reflection_search(self, search_vector, node, degree, k=10):
+        reflection_node = node
+        for i in range(degree):
+            if reflection_node.up_lv:
+                reflection_node = reflection_node.up_lv
+            else:
+                break
+        
+        reflected_vector = calculation.reflection(search_vector, reflection_node.center)
+        print(reflected_vector)
+        knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
+
+        belong_node = self._get_closest_node_within_lv(reflection_node, reflected_vector, mode="lv", lv=i)
+
+        return [belong_node, reflected_vector, knn_res]
+    
+    # reflection_search_helper
+    def _get_closest_node_within_lv(self, reflected_vector, node, lv=float("inf")):
+        if lv < float("inf"):
+            sorted_node = node
+            sorted_dist = float("inf")
+            print("will return a one closest node within lv")
+        elif lv == float("inf"):
+            sorted_node = []
+            sorted_dist = []
+            print("will return a sorted list of leaf node")
+
+        queue = deque([node])
+        
+        lv_counter = 0
+
+        while lv_counter <= lv:
+            print([n.id for n in queue])
+            if not queue:
+                break
+
+            size = len(queue)
+            for _ in range(size):
+                cur = queue.popleft()
+                print("poped", cur.id)
+                if not(cur.down_lv) or lv_counter==lv:
+                    print("cal", not(cur.down_lv), lv_counter==lv)
+                    cur_dist = calculation.l1(reflected_vector, cur.center)
+
+                    if lv < float("inf"):
+                        if cur_dist < sorted_dist:
+                            sorted_dist = cur_dist
+                            sorted_node = cur
+
+                    elif lv == float("inf"):
+                        position = bisect.bisect_left(sorted_dist, cur_dist)
+                        sorted_dist.insert(position, cur_dist)
+                        sorted_node.insert(position, cur)
+
+                else:
+                    queue.extend(cur.down_lv)
+
+            lv_counter+=1
+
+        return sorted_node
+        
+    def fast_knn(self, vector, node, k=10):
+        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node, mode="leaf")
+        # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
+        sorted_knn_val = [float("inf") for i in range(k)]
+        sorted_knn_res = [None for i in range(k)]
+
+        for node in sorted_node_to_vector:
+            # print(f"checking {node.id}")
+            test = calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]])
+            # print(f"potential: {test}, far of knn: {sorted_knn_val[-1]}")
+            if calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
+                for index in node.index:
+                    dist = calculation.l1(vector, self.X[index])
+                    if dist < sorted_knn_val[-1]:
+                        # print(f"add dist {dist} and data {index}")
+                        sorted_knn_val.pop()
+                        sorted_knn_res.pop()
+                        position = bisect.bisect_left(sorted_knn_val, dist)
+                        sorted_knn_val.insert(position, dist)
+                        sorted_knn_res.insert(position, index)
+                        # print("update", sorted_knn_val, "\n", sorted_knn_res)
+            else:
+                # print("early break of knn")
+                break
+
+        return sorted_knn_res
+    
+    ############################### check tree area
+    def print_tree(self, node, prefix="", is_last=True):
+        """ Recursively print the tree in a visual structure with connecting lines. """
+        
+        # Print the current node
+        print(prefix + ("└── " if is_last else "├── ") + str(node.id))
+        
+        # Update the prefix for the next level (children)
+        new_prefix = prefix + ("    " if is_last else "│   ")
+        
+        # Iterate over children
+        if node.down_lv:
+            for i, child in enumerate(node.down_lv):
+                # Determine if the child is the last child
+                is_last_child = (i == len(node.down_lv) - 1)
+                # Recursively print the child nodes
+                self.print_tree(child, new_prefix, is_last_child)
+
+    
+    ############################## get data area
     def get_suround_cluster(self, node, query_vector=None):
         if query_vector is None:
             query_vector = node.center
