@@ -3,51 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Increment Integer with D3.js</title>
+    <title>Vertical Tree with D3.js</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font: 12px sans-serif;
+        }
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Increment Integer by 10</h1>
-    
-    <!-- Area 1 -->
-    <div class="area" id="area1">
-        <input type="number" id="inputValue1" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="1">Add 10</button>
-        <p>Updated Value: <span id="updatedValue1"></span></p>
-    </div>
+    <div id="tree-container"></div>
 
-    <!-- Area 2 -->
-    <div class="area" id="area2">
-        <input type="number" id="inputValue2" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="2">Add 10</button>
-        <p>Updated Value: <span id="updatedValue2"></span></p>
-    </div>
-
-    <!-- Area 3 -->
-    <div class="area" id="area3">
-        <input type="number" id="inputValue3" placeholder="Enter an integer">
-        <button class="incrementButton" data-target="3">Add 10</button>
-        <p>Updated Value: <span id="updatedValue3"></span></p>
-    </div>
-    
     <script>
-        d3.selectAll('.incrementButton').on('click', function() {
-            const target = d3.select(this).attr('data-target');
-            const inputValue = d3.select('#inputValue' + target).property('value');
-
-            fetch('/increment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: 'value=' + encodeURIComponent(inputValue)
-            })
-            .then(response => response.text())
+        // Fetch tree data from the backend
+        fetch('/tree-data')
+            .then(response => response.json())
             .then(data => {
-                d3.select('#updatedValue' + target).text(data);
-            })
-            .catch(error => console.error('Error:', error));
-        });
+                renderTree(data);
+            });
+
+        function renderTree(data) {
+            const width = 600, height = 600;
+
+            const svg = d3.select("#tree-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", "translate(50,50)");
+
+            const root = d3.hierarchy(data);
+
+            const treeLayout = d3.tree().size([height - 100, width - 100]);
+
+            treeLayout(root);
+
+            // Vertical links (top-down layout)
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)  // x and y swapped for vertical layout
+                    .y(d => d.y)
+                );
+
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter()
+                .append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            node.append("circle")
+                .attr("r", 5);
+
+            node.append("text")
+                .attr("dy", ".35em")
+                .attr("x", d => d.children ? -10 : 10)
+                .attr("text-anchor", d => d.children ? "end" : "start")
+                .text(d => d.data.name);
+        }
     </script>
 </body>
 </html>
