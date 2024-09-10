@@ -20,11 +20,15 @@ def _k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
   return k_means_model
 
 class Node:
-    def __init__(self, id = None, entity = None, center = None, index = None, up_lv = None, down_lv = []):
+    def __init__(self, id = None, center = None, index = None, up_lv = None, down_lv = []):
         self.id = id # unique id for node
         self.center = center # cluster center (vector)
         self.index = index # cashe of search result, first 100? result close to center (list of index)
+        self.up_lv = up_lv
         self.down_lv = down_lv # sub-cluster (lsit of node)
+
+    def info(self):
+        print(self.id, "\n", self.center, "\n", self.up_lv.id, "\n", [n.id for n in self.down_lv])
 
 class calculation:
     def l1(vector_1, vector_2):
@@ -33,7 +37,7 @@ class calculation:
     def l2(vector_1, vector_2):
         return sum((np.array(vector_1)-np.array(vector_2))**2)
     
-    def reflection(self, vector, reflection_vector):
+    def reflection(vector, reflection_vector):
         return 2*reflection_vector - vector
     
     def translate_to_norm_vector(original_vector, max, min):
@@ -51,9 +55,9 @@ class graph_tree:
         self.X = X
         self.X_maxmin = X_maxmin
 
-        self.parent = []
         self.nodes = []
-        self.graph = []
+        self.lv_start = []
+        self.graphs = []
 
         # init para for storing
         self.recom = None # a list of node, [[attr 1 max node, attr 1 min node], [attr 2 max node, attr 2 min node]...]
@@ -67,70 +71,80 @@ class graph_tree:
         # create root node
         root_center = np.mean(self.X, axis=0)
         init_idx = np.array([i for i in range(len(self.X))])
-        root_node = Node(id=0, entity=sorted(list(zip(self.attr_name, root_center))), center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))])
+        root_node = Node(id=0, center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))])
         self.nodes.append(root_node)
-        self.parent.append(-1)
-        self.graph.append([])
+        self.lv_start = [0,1]
+        self.graphs.append([])
 
         recom_max = root_center.copy()
         recom_min = root_center.copy()
         recom = [[root_node, root_node] for _ in range(len(self.attr_name))]
         
-        counter_id = 1
-        pointer = 0
-        lv = 0
+        while True:
+            start = self.lv_start[-2]
+            end = self.lv_start[-1]
+            counter_lv_node = 0
+            for i in range(start, end):
+                cur = self.nodes[i]
+                # k means required parameter and train the model
+                print(f"cur node {cur.id}")
+                print(f"no. of cur node data {len(cur.index)}")
 
-        while pointer < len(self.nodes):
-            print(f"\n---------------------------------- level {lv} ----------------------------------------")
-            cur = self.nodes[pointer]
-            # k means required parameter and train the model
-            print(f"cur node {cur.id}")
-            print(f"no. of cur node data {len(cur.index)}")
+                # kmeans part
+                if len(cur.index) > min_threshold_for_clustering:
+                    cur_X = self.X[cur.index] # get cur data by index
+                    k_means_model = _k_means_model_with_best_sil_score(cur_X) # get kmeans model with best k
+                    print(f"optimal K {k_means_model.n_clusters}")
 
-            # kmeans part
-            if len(cur.index) > min_threshold_for_clustering:
-                cur_X = self.X[cur.index] # get cur data by index
-                k_means_model = _k_means_model_with_best_sil_score(cur_X) # get kmeans model with best k
-                print(f"optimal K {k_means_model.n_clusters}\n")
+                    # neccessary para for create node
+                    # sorting the index
+                    # cal the distance between each data to coresponding center
+                    distance_to_self_center = [
+                        calculation.l1(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]) 
+                        for i in range(len(cur_X))
+                    ]
+                    
+                    sorted_indix_from_dist = np.argsort(distance_to_self_center)
+                    sorted_index = cur.index[sorted_indix_from_dist]
+                    sorted_labels = k_means_model.labels_[sorted_indix_from_dist]
 
-                # sorting the index
-                #cal the distance between each data to coresponding center
-                distance_to_self_center = [
-                    calculation.l1(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]) 
-                    for i in range(len(cur_X))
-                ]
-                
-                sorted_indix_from_dist = np.argsort(distance_to_self_center)
-                sorted_index = cur.index[sorted_indix_from_dist]
-                sorted_labels = k_means_model.labels_[sorted_indix_from_dist]
+                    # create new nodes
+                    new_node = [
+                        Node(
+                            id=i+end+counter_lv_node,
+                            center=k_means_model.cluster_centers_[i],
+                            index=sorted_index[np.where(sorted_labels == i)[0]],
+                            up_lv=cur
+                        )
+                        for i in range(k_means_model.n_clusters)
+                    ]
+                    
+                    self.nodes.extend(new_node)
+                    
+                    # make reference to down_lv
+                    cur.down_lv = self.nodes[end+counter_lv_node:len(self.nodes)]
+                    print(f"{cur.id}'s child: {[n.id for n in cur.down_lv]} \n")
 
-                new_node = [Node(id=i+counter_id, center=k_means_model.cluster_centers_[i], index=sorted_index[np.where(sorted_labels == i)[0]]) for i in range(k_means_model.n_clusters)]
+                    counter_lv_node += k_means_model.n_clusters
 
-                cur.down_lv = [i.id for i in new_node]
-                
-                self.nodes.extend(new_node)
-                self.parent.extend([cur.id] * k_means_model.n_clusters)
-                self.graph.extend([self.graph[cur.id]+1] * k_means_model.n_clusters)
-                # print(f"down lv of this node {new_down_lv}")
-                print(self.parent,"\n",self.nodes,"\n",self.graph)
+                else:
+                    #add to the recom
+                    for i in range(len(cur.center)):
+                        if cur.center[i] >= recom_max[i]:
+                            recom_max[i] = cur.center[i]
+                            recom[i][0] = cur
+                            print(f"added to {self.attr_name[i]} max")
+                        elif cur.center[i] <= recom_min[i]:
+                            recom_min[i] = cur.center[i]
+                            recom[i][1] = cur
+                            print(f"added to {self.attr_name[i]} min")
+                    print("\n")
 
-                counter_id += k_means_model.n_clusters
+            self.lv_start.append(len(self.nodes))
+            
+            if counter_lv_node == 0:
+                break
 
-            else:
-                #add to the recom
-                for i in range(len(cur.center)):
-                    if cur.center[i] >= recom_max[i]:
-                        recom_max[i] = cur.center[i]
-                        recom[i][0] = cur
-                        print(f"added to {self.attr_name[i]} max")
-                    elif cur.center[i] <= recom_min[i]:
-                        recom_min[i] = cur.center[i]
-                        recom[i][1] = cur
-                        print(f"added to {self.attr_name[i]} min")
-                
-
-        pointer += 1
-        
         self.recom = recom
 
         return 0
@@ -139,9 +153,9 @@ class graph_tree:
     def search(self, q_vector):
         q_norm_vector = calculation.translate_to_norm_vector(q_vector, max=self.X_maxmin[0], min=self.X_maxmin[1])
         self.q_norm_vector = q_norm_vector
-        closest_node = self.root
-        queue = deque([self.root])
-        closest = calculation.l1(self.root.center, q_norm_vector)
+        closest_node = self.nodes[0]
+        queue = deque([self.nodes[0]])
+        closest = calculation.l1(self.nodes[0].center, q_norm_vector)
         
         while queue:
             cur = queue.popleft()
@@ -174,6 +188,7 @@ class graph_tree:
                 reflection_node = reflection_node.up_lv
             else:
                 break
+        print(reflection_node.id)
         
         reflected_vector = calculation.reflection(search_vector, reflection_node.center)
 
@@ -185,7 +200,7 @@ class graph_tree:
     # reflection_search_helper
     def _get_closest_node_within_lv(self, reflected_vector, node, lv=float("inf")):
         if lv < float("inf"):
-            sorted_node = node
+            sorted_node = [node]
             sorted_dist = float("inf")
             print("will return a one closest node within lv")
         elif lv == float("inf"):
@@ -213,7 +228,7 @@ class graph_tree:
                     if lv < float("inf"):
                         if cur_dist < sorted_dist:
                             sorted_dist = cur_dist
-                            sorted_node = cur
+                            sorted_node[0] = cur
 
                     elif lv == float("inf"):
                         position = bisect.bisect_left(sorted_dist, cur_dist)
@@ -224,11 +239,13 @@ class graph_tree:
                     queue.extend(cur.down_lv)
 
             lv_counter+=1
+        
+        print("res",[n.id for n in sorted_node])
 
         return sorted_node
         
     def fast_knn(self, vector, node, k=10):
-        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node, mode="leaf")
+        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node)
         # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
         sorted_knn_val = [float("inf") for i in range(k)]
         sorted_knn_res = [None for i in range(k)]
