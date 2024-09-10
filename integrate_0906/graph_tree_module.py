@@ -65,21 +65,22 @@ class graph_tree:
         while queue:
             cur = queue.popleft()
             dist = sim.l1(cur.center, q_vector)
-            print(f"checking {cur.id}, dist: {dist}")
+            # print(f"checking {cur.id}, dist: {dist}")
             
             if dist < closest:
                 closest_node = cur
                 closest = dist
-                print(f"cur node: {closest_node.id}, closest: {closest}")
+                # print(f"cur node: {closest_node.id}, closest: {closest}")
                 queue.extend(cur.down_lv if cur.down_lv else [])
             
             elif dist - sim.l1(cur.center, self.X[cur.index[-1]]) < closest:
-                print(f"{cur.id} potential")
+                # print(f"{cur.id} potential")
                 queue.extend(cur.down_lv if cur.down_lv else [])
             else:
-                print(f"{cur.id} puned")
+                continue
+                # print(f"{cur.id} puned")
 
-            print([n.id for n in queue], "\n")
+            # print([n.id for n in queue], "\n")
 
         self.get_suround_cluster(closest_node, q_vector)
 
