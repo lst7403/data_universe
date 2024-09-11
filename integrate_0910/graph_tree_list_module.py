@@ -20,27 +20,29 @@ def _k_means_model_with_best_sil_score(X, random_seed = 0, kmax = 10):
   return k_means_model
 
 class Node:
-    def __init__(self, id, center, index, lv, up_lv = None, down_lv = []):
+    def __init__(self, id = None, center = None, index = None, up_lv = None, down_lv = []):
         self.id = id # unique id for node
         self.center = center # cluster center (vector)
         self.index = index # cashe of search result, first 100? result close to center (list of index)
-        self.lv = lv
-        self.up_lv = up_lv # super-cluster (node)
+        self.up_lv = up_lv
         self.down_lv = down_lv # sub-cluster (lsit of node)
+
+    def info(self):
+        print(self.id, "\n", self.center, "\n", self.up_lv.id, "\n", [n.id for n in self.down_lv])
 
 class calculation:
     def l1(vector_1, vector_2):
-        return np.sum(np.abs(vector_1 - vector_2))
+        return np.sum(np.abs(np.array(vector_1)-np.array(vector_2)))
 
     def l2(vector_1, vector_2):
-        return np.sum((vector_1 - vector_2)**2)
-
-    def reflection(original_vector, reflection_vector):
-        return (2 * reflection_vector) - original_vector
-
-    def translate_to_norm_vector(original_vector, max_val, min_val):
-        return (original_vector - min_val) / (max_val - min_val)
-
+        return sum((np.array(vector_1)-np.array(vector_2))**2)
+    
+    def reflection(vector, reflection_vector):
+        return 2*reflection_vector - vector
+    
+    def translate_to_norm_vector(original_vector, max, min):
+        return (original_vector - min)/(max - min)
+    
     def sort_dict():
         pass
              
@@ -52,6 +54,10 @@ class graph_tree:
         self.attr_name = attr_name
         self.X = X
         self.X_maxmin = X_maxmin
+
+        self.nodes = []
+        self.lv_start = []
+        self.graphs = []
 
         # init para for storing
         self.recom = None # a list of node, [[attr 1 max node, attr 1 min node], [attr 2 max node, attr 2 min node]...]
@@ -65,43 +71,32 @@ class graph_tree:
         # create root node
         root_center = np.mean(self.X, axis=0)
         init_idx = np.array([i for i in range(len(self.X))])
-        root_node = Node(id=0, center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))], lv=0)
-        self.root = root_node
+        root_node = Node(id=0, center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))])
+        self.nodes.append(root_node)
+        self.lv_start = [0,1]
+        self.graphs.append([])
 
         recom_max = root_center.copy()
         recom_min = root_center.copy()
         recom = [[root_node, root_node] for _ in range(len(self.attr_name))]
         
-        queue = deque([root_node])
-        
-        id_counter = 1
-        lv = 0
-
-        while queue:
-            size = len(queue)
-            print(f"\n---------------------------------- level {lv} no of node {size} ----------------------------------------")
-            print("queue: ", [n.id for n in queue])
-
-            for _ in range(size):
+        while True:
+            start = self.lv_start[-2]
+            end = self.lv_start[-1]
+            counter_lv_node = 0
+            for i in range(start, end):
+                cur = self.nodes[i]
                 # k means required parameter and train the model
-                cur = queue.popleft() # get cur node
                 print(f"cur node {cur.id}")
                 print(f"no. of cur node data {len(cur.index)}")
+
+                # kmeans part
                 if len(cur.index) > min_threshold_for_clustering:
                     cur_X = self.X[cur.index] # get cur data by index
-                    k_means_model = _k_means_model_with_best_sil_score(cur_X) # get kmeans model
-                    print(f"optimal K {k_means_model.n_clusters}\n")
+                    k_means_model = _k_means_model_with_best_sil_score(cur_X) # get kmeans model with best k
+                    print(f"optimal K {k_means_model.n_clusters}")
 
-                    # # relationship
-                    # attr_no = 3
-                    # largest_indices = np.argpartition(np.std(k_means_model.cluster_centers_, axis=0), -attr_no)[-attr_no:]
-                    # print(largest_indices)
-
-                    # relationship = {}
-                    # np.argpartition(np.std(k_means_model.cluster_centers_, axis=0), -attr_no)[-attr_no:]
-                    # for i in largest_indices:
-                    #     tmp_entity[self.attr_name[i]]=k_means_model.cluster_centers_[groups][i]
-
+                    # neccessary para for create node
                     # sorting the index
                     # cal the distance between each data to coresponding center
                     distance_to_self_center = [
@@ -113,23 +108,27 @@ class graph_tree:
                     sorted_index = cur.index[sorted_indix_from_dist]
                     sorted_labels = k_means_model.labels_[sorted_indix_from_dist]
 
-                    new_down_lv = [
-                        Node(id = i+id_counter, 
-                             center = k_means_model.cluster_centers_[i], 
-                             index = sorted_index[np.where(sorted_labels == i)[0]],
-                             lv = lv+1)
+                    # create new nodes
+                    new_node = [
+                        Node(
+                            id=i+end+counter_lv_node,
+                            center=k_means_model.cluster_centers_[i],
+                            index=sorted_index[np.where(sorted_labels == i)[0]],
+                            up_lv=cur
+                        )
                         for i in range(k_means_model.n_clusters)
                     ]
-
-                    # new_down_lv.sort(key=lambda x: calculation.l1(x.center, cur.center))
-                    cur.down_lv = new_down_lv
                     
-                    queue.extend(new_down_lv)
-                    # print(f"down lv of this node {new_down_lv}")
+                    self.nodes.extend(new_node)
+                    
+                    # make reference to down_lv
+                    cur.down_lv = self.nodes[end+counter_lv_node:len(self.nodes)]
+                    print(f"{cur.id}'s child: {[n.id for n in cur.down_lv]} \n")
 
-                    id_counter += k_means_model.n_clusters
+                    counter_lv_node += k_means_model.n_clusters
 
                 else:
+                    #add to the recom
                     for i in range(len(cur.center)):
                         if cur.center[i] >= recom_max[i]:
                             recom_max[i] = cur.center[i]
@@ -139,10 +138,13 @@ class graph_tree:
                             recom_min[i] = cur.center[i]
                             recom[i][1] = cur
                             print(f"added to {self.attr_name[i]} min")
-                    
+                    print("\n")
 
-            lv += 1
-        print(self.)
+            self.lv_start.append(len(self.nodes))
+            
+            if counter_lv_node == 0:
+                break
+
         self.recom = recom
 
         return 0
@@ -151,9 +153,9 @@ class graph_tree:
     def search(self, q_vector):
         q_norm_vector = calculation.translate_to_norm_vector(q_vector, max=self.X_maxmin[0], min=self.X_maxmin[1])
         self.q_norm_vector = q_norm_vector
-        closest_node = self.root
-        queue = deque([self.root])
-        closest = calculation.l1(self.root.center, q_norm_vector)
+        closest_node = self.nodes[0]
+        queue = deque([self.nodes[0]])
+        closest = calculation.l1(self.nodes[0].center, q_norm_vector)
         
         while queue:
             cur = queue.popleft()
@@ -186,22 +188,19 @@ class graph_tree:
                 reflection_node = reflection_node.up_lv
             else:
                 break
+        print(reflection_node.id)
         
         reflected_vector = calculation.reflection(search_vector, reflection_node.center)
 
         knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
         belong_node = self._get_closest_node_within_lv(reflected_vector, reflection_node, lv=i)
 
-        return {
-            'belong_node': belong_node,
-            'reflected_vector': reflected_vector,
-            'knn_res': knn_res
-        }
+        return [belong_node, reflected_vector, knn_res]
     
     # reflection_search_helper
     def _get_closest_node_within_lv(self, reflected_vector, node, lv=float("inf")):
         if lv < float("inf"):
-            sorted_node = node
+            sorted_node = [node]
             sorted_dist = float("inf")
             print("will return a one closest node within lv")
         elif lv == float("inf"):
@@ -229,7 +228,7 @@ class graph_tree:
                     if lv < float("inf"):
                         if cur_dist < sorted_dist:
                             sorted_dist = cur_dist
-                            sorted_node = cur
+                            sorted_node[0] = cur
 
                     elif lv == float("inf"):
                         position = bisect.bisect_left(sorted_dist, cur_dist)
@@ -240,11 +239,13 @@ class graph_tree:
                     queue.extend(cur.down_lv)
 
             lv_counter+=1
+        
+        print("res",[n.id for n in sorted_node])
 
         return sorted_node
         
     def fast_knn(self, vector, node, k=10):
-        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node, mode="leaf")
+        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node)
         # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
         sorted_knn_val = [float("inf") for i in range(k)]
         sorted_knn_res = [None for i in range(k)]
@@ -291,7 +292,7 @@ class graph_tree:
     
     ############################## get data area
     def get_suround_cluster(self, node, query_vector=None):
-        if query_vector:
+        if query_vector is None:
             query_vector = node.center
 
         super_cluster = node.up_lv if node.up_lv else None
@@ -304,8 +305,8 @@ class graph_tree:
         c1 = self.reflection_search(query_vector, node, degree=1)
         c2 = self.reflection_search(query_vector, node, degree=2)
         contra_cluster = [
-            Node(id=-1, center=c1["reflected_vector"], index=c1["knn_res"], lv=c1["belong_node"].lv, up_lv=c1["belong_node"].up_lv, down_lv=c1["belong_node"].up_lv),
-            Node(id=-2, center=c2["reflected_vector"], index=c2["knn_res"], lv=c2["belong_node"].lv, up_lv=c2["belong_node"].up_lv, down_lv=c2["belong_node"].up_lv)
+            Node(id=-1, entity=calculation.reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
+            Node(id=-2, entity=calculation.reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
         ]
         res = {
             "cur_cluster": node,
@@ -314,6 +315,8 @@ class graph_tree:
             "sub_cluster": sub_cluster,
             "contra_cluster": contra_cluster
         }
+
+        self.status = res
         
         return res
 

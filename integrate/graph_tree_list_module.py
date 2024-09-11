@@ -74,7 +74,6 @@ class graph_tree:
         root_node = Node(id=0, center=root_center, index=init_idx[np.argsort(np.sum(abs(self.X-root_center), axis=1))])
         self.nodes.append(root_node)
         self.lv_start = [0,1]
-        self.graphs.append([])
 
         recom_max = root_center.copy()
         recom_min = root_center.copy()
@@ -83,12 +82,16 @@ class graph_tree:
         while True:
             start = self.lv_start[-2]
             end = self.lv_start[-1]
+
             counter_lv_node = 0
-            for i in range(start, end):
-                cur = self.nodes[i]
+
+            new_graph = []
+
+            for node_i in range(start, end):
+                cur = self.nodes[node_i]
                 # k means required parameter and train the model
                 print(f"cur node {cur.id}")
-                print(f"no. of cur node data {len(cur.index)}")
+                # print(f"no. of cur node data {len(cur.index)}")
 
                 # kmeans part
                 if len(cur.index) > min_threshold_for_clustering:
@@ -100,7 +103,7 @@ class graph_tree:
                     # sorting the index
                     # cal the distance between each data to coresponding center
                     distance_to_self_center = [
-                        calculation.l1(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]) 
+                        calculation.l2(cur_X[i], k_means_model.cluster_centers_[k_means_model.labels_[i]]) 
                         for i in range(len(cur_X))
                     ]
                     
@@ -123,28 +126,38 @@ class graph_tree:
                     
                     # make reference to down_lv
                     cur.down_lv = self.nodes[end+counter_lv_node:len(self.nodes)]
-                    print(f"{cur.id}'s child: {[n.id for n in cur.down_lv]} \n")
+                    # print(f"{cur.id}'s child: {[n.id for n in cur.down_lv]} \n")
 
                     counter_lv_node += k_means_model.n_clusters
 
                 else:
                     #add to the recom
-                    for i in range(len(cur.center)):
-                        if cur.center[i] >= recom_max[i]:
-                            recom_max[i] = cur.center[i]
-                            recom[i][0] = cur
-                            print(f"added to {self.attr_name[i]} max")
-                        elif cur.center[i] <= recom_min[i]:
-                            recom_min[i] = cur.center[i]
-                            recom[i][1] = cur
-                            print(f"added to {self.attr_name[i]} min")
-                    print("\n")
+                    for attr_i in range(len(cur.center)):
+                        if cur.center[attr_i] >= recom_max[attr_i]:
+                            recom_max[attr_i] = cur.center[attr_i]
+                            recom[attr_i][0] = cur
+                            # print(f"added to {self.attr_name[attr_i]} max")
 
-            self.lv_start.append(len(self.nodes))
+                        elif cur.center[attr_i] <= recom_min[attr_i]:
+                            recom_min[attr_i] = cur.center[attr_i]
+                            recom[attr_i][1] = cur
+                            # print(f"added to {self.attr_name[attr_i]} min")
+
+                # graph part
+                if node_i + 1 < end:
+                    new_graph.append([calculation.l2(cur.center, self.nodes[after_node_i].center) for after_node_i in range(node_i+1,end)])
+
+                print(new_graph)
             
+            self.graphs.append(new_graph)
+            print("all", self.graphs)
+
             if counter_lv_node == 0:
                 break
 
+            self.lv_start.append(len(self.nodes))
+            print(self.lv_start, "\n")
+        
         self.recom = recom
 
         return 0
@@ -155,11 +168,11 @@ class graph_tree:
         self.q_norm_vector = q_norm_vector
         closest_node = self.nodes[0]
         queue = deque([self.nodes[0]])
-        closest = calculation.l1(self.nodes[0].center, q_norm_vector)
+        closest = calculation.l2(self.nodes[0].center, q_norm_vector)
         
         while queue:
             cur = queue.popleft()
-            dist = calculation.l1(cur.center, q_norm_vector)
+            dist = calculation.l2(cur.center, q_norm_vector)
             # print(f"checking {cur.id}, dist: {dist}")
             
             if dist < closest:
@@ -168,7 +181,7 @@ class graph_tree:
                 # print(f"cur node: {closest_node.id}, closest: {closest}")
                 queue.extend(cur.down_lv)
             
-            elif dist - calculation.l1(cur.center, self.X[cur.index[-1]]) < closest:
+            elif dist - calculation.l2(cur.center, self.X[cur.index[-1]]) < closest:
                 # print(f"{cur.id} potential")
                 queue.extend(cur.down_lv)
             else:
@@ -223,7 +236,7 @@ class graph_tree:
                 print("poped", cur.id)
                 if not(cur.down_lv) or lv_counter==lv:
                     print("cal", not(cur.down_lv), lv_counter==lv)
-                    cur_dist = calculation.l1(reflected_vector, cur.center)
+                    cur_dist = calculation.l2(reflected_vector, cur.center)
 
                     if lv < float("inf"):
                         if cur_dist < sorted_dist:
@@ -252,11 +265,11 @@ class graph_tree:
 
         for node in sorted_node_to_vector:
             # print(f"checking {node.id}")
-            test = calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]])
+            test = calculation.l2(node.center, vector) - calculation.l2(node.center, self.X[node.index[-1]])
             # print(f"potential: {test}, far of knn: {sorted_knn_val[-1]}")
-            if calculation.l1(node.center, vector) - calculation.l1(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
+            if calculation.l2(node.center, vector) - calculation.l2(node.center, self.X[node.index[-1]]) < sorted_knn_val[-1]:
                 for index in node.index:
-                    dist = calculation.l1(vector, self.X[index])
+                    dist = calculation.l2(vector, self.X[index])
                     if dist < sorted_knn_val[-1]:
                         # print(f"add dist {dist} and data {index}")
                         sorted_knn_val.pop()
@@ -270,6 +283,9 @@ class graph_tree:
                 break
 
         return sorted_knn_res
+    
+    def graph_search(self, node, degree):
+        belong_lv = bisect.bisect_left(node.id)
     
     ############################### check tree area
     def print_tree(self, node, prefix="", is_last=True):
