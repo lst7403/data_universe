@@ -31,11 +31,14 @@ class Node:
         print(self.id, "\n", self.center, "\n", self.up_lv.id, "\n", [n.id for n in self.down_lv])
 
 class calculation:
-    def l1(vector_1, vector_2):
-        return np.sum(np.abs(np.array(vector_1)-np.array(vector_2)))
+    def l1(vec1, vec2):
+        return np.sum(np.abs(np.array(vec1)-np.array(vec2)))
 
-    def l2(vector_1, vector_2):
-        return sum((np.array(vector_1)-np.array(vector_2))**2)
+    def l2_efficient(vec1, vec2):
+        return sum((np.array(vec1)-np.array(vec2))**2)
+    
+    def l2(vec1, vec2):
+        return np.sqrt(sum((np.array(vec1)-np.array(vec2))**2))
     
     def reflection(vector, reflection_vector):
         return 2*reflection_vector - vector
@@ -43,6 +46,19 @@ class calculation:
     def translate_to_norm_vector(original_vector, max, min):
         return (original_vector - min)/(max - min)
     
+    def cos_sim_and_ecul(vec1, vec2):
+        # Calculate dot product between vec1 and vec2
+        dot_product = np.dot(vec1, vec2)
+        
+        # Calculate magnitudes (norms) of vec1 and vec2
+        norm_vec1 = np.linalg.norm(vec1)
+        norm_vec2 = np.linalg.norm(vec2)
+
+        cos = dot_product / (norm_vec1 * norm_vec2)
+        ecul = np.sqrt(norm_vec1**2 + norm_vec2**2 - (2 * norm_vec1 * norm_vec2 * cos))
+    
+        return cos, ecul
+
     def sort_dict():
         pass
              
@@ -147,16 +163,16 @@ class graph_tree:
                 if node_i + 1 < end:
                     new_graph.append([calculation.l2(cur.center, self.nodes[after_node_i].center) for after_node_i in range(node_i+1,end)])
 
-                print(new_graph)
+                # print(new_graph)
             
             self.graphs.append(new_graph)
-            print("all", self.graphs)
+            # print("all", self.graphs)
 
             if counter_lv_node == 0:
                 break
 
             self.lv_start.append(len(self.nodes))
-            print(self.lv_start, "\n")
+            # print(self.lv_start, "\n")
         
         self.recom = recom
 
@@ -194,7 +210,7 @@ class graph_tree:
 
         return closest_node
     
-    def reflection_search(self, search_vector, node, degree, k=10):
+    def discovery_search(self, search_vector, node, degree=3):
         reflection_node = node
         for i in range(degree):
             if reflection_node.up_lv:
@@ -202,48 +218,51 @@ class graph_tree:
             else:
                 break
         print(reflection_node.id)
-        
-        reflected_vector = calculation.reflection(search_vector, reflection_node.center)
 
-        knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
-        belong_node = self._get_closest_node_within_lv(reflected_vector, reflection_node, lv=i)
+        # knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
+        belong_node = self._get_closest_node_within_lv(search_vector, reflection_node, lv=i)
 
-        return [belong_node, reflected_vector, knn_res]
+        return 
     
-    # reflection_search_helper
-    def _get_closest_node_within_lv(self, reflected_vector, node, lv=float("inf")):
+    # discovery_search_helper
+    def get_sorted_node_within_lv(self, vector, reflection_node, lv=float("inf")):
         if lv < float("inf"):
-            sorted_node = [node]
-            sorted_dist = float("inf")
-            print("will return a one closest node within lv")
+            sorted_cos = []
+            sorted_node = []
+            euclide_dist = []
+            feature_vector = vector - reflection_node.center
+            print("generate cos sim, ecul dist, and nodes sorted by cos sim")
         elif lv == float("inf"):
             sorted_node = []
             sorted_dist = []
-            print("will return a sorted list of leaf node")
+            print("generate sorted list of leaf node for fast_knn")
 
-        queue = deque([node])
+        queue = deque([reflection_node])
         
         lv_counter = 0
 
         while lv_counter <= lv:
-            print([n.id for n in queue])
             if not queue:
                 break
 
+            print([n.id for n in queue])
             size = len(queue)
+
             for _ in range(size):
                 cur = queue.popleft()
-                print("poped", cur.id)
+                # print("poped", cur.id)
                 if not(cur.down_lv) or lv_counter==lv:
-                    print("cal", not(cur.down_lv), lv_counter==lv)
-                    cur_dist = calculation.l2(reflected_vector, cur.center)
+                    # print("cal")
 
                     if lv < float("inf"):
-                        if cur_dist < sorted_dist:
-                            sorted_dist = cur_dist
-                            sorted_node[0] = cur
+                        cur_cos_sim_and_ecul = calculation.cos_sim_and_ecul(feature_vector, cur.center-reflection_node.center)
+                        position = bisect.bisect_left(sorted_cos, cur_cos_sim_and_ecul[0])
+                        sorted_cos.insert(position, cur_cos_sim_and_ecul[0])
+                        euclide_dist.insert(position, cur_cos_sim_and_ecul[1])
+                        sorted_node.insert(position, cur)
 
                     elif lv == float("inf"):
+                        cur_dist = calculation.l2(vector, reflection_node.center)
                         position = bisect.bisect_left(sorted_dist, cur_dist)
                         sorted_dist.insert(position, cur_dist)
                         sorted_node.insert(position, cur)
@@ -252,13 +271,19 @@ class graph_tree:
                     queue.extend(cur.down_lv)
 
             lv_counter+=1
-        
-        print("res",[n.id for n in sorted_node])
 
-        return sorted_node
+        if lv < float("inf"):
+            # pop isself
+            if sorted_node[-1].id == self.cur:
+                sorted_cos.pop()
+                sorted_node.pop()
+                euclide_dist.pop()
+            return {"sorted_cos_sim": sorted_cos, "euclide_dist": euclide_dist, "sorted_nodes": sorted_node}
+        elif lv == float("inf"):
+            return sorted_node
         
     def fast_knn(self, vector, node, k=10):
-        sorted_node_to_vector = self._get_closest_node_within_lv(vector, node)
+        sorted_node_to_vector = self.get_sorted_node_within_lv(vector, node)
         # print(f"finish sorted_node_to_vector: {[node.id for node in sorted_node_to_vector]}")
         sorted_knn_val = [float("inf") for i in range(k)]
         sorted_knn_res = [None for i in range(k)]
@@ -284,8 +309,35 @@ class graph_tree:
 
         return sorted_knn_res
     
-    def graph_search(self, node, degree):
-        belong_lv = bisect.bisect_left(node.id)
+    def graph_search(self, node):
+        belong_lv = bisect.bisect_right(self.lv_start, node.id)-1
+
+        starting_node_id = self.lv_start[belong_lv]
+        graph = self.graphs[belong_lv]
+        # for row in graph:
+        #     print(row)
+        
+        index_in_graph = node.id - starting_node_id
+
+        nodes_id = np.array([id for id in range(starting_node_id, self.lv_start[belong_lv+1])])
+        nodes_id = np.delete(nodes_id, index_in_graph)
+        print("other nodes in this lv:", nodes_id)
+
+        
+        relations = [graph[row][index_in_graph-1-row] for row in range(index_in_graph)] if index_in_graph > 0 else []
+
+        if index_in_graph < len(graph):
+            relations.extend(graph[index_in_graph])
+        print(relations)
+
+        sorted_indices = np.argsort(relations)
+        sorted_nodes_id = nodes_id[sorted_indices]
+        print(sorted_nodes_id)
+
+        sorted_node = [self.nodes[i] for i in sorted_nodes_id]
+        
+        return sorted_node
+
     
     ############################### check tree area
     def print_tree(self, node, prefix="", is_last=True):
@@ -307,33 +359,39 @@ class graph_tree:
 
     
     ############################## get data area
-    def get_suround_cluster(self, node, query_vector=None):
+    def get_graph_data(self, node_id, query_vector=None):
         if query_vector is None:
-            query_vector = node.center
+            query_vector = self.nodes[node_id].center
 
-        super_cluster = node.up_lv if node.up_lv else None
+        
 
-        tmp = node.up_lv if node.up_lv else None
-        neibour_cluster = [n for n in tmp.down_lv if n != node] if tmp else None
+        # init
+        cur_cluster = self.nodes[node_id]
 
-        sub_cluster = node.down_lv if node.down_lv else None
-
-        c1 = self.reflection_search(query_vector, node, degree=1)
-        c2 = self.reflection_search(query_vector, node, degree=2)
-        contra_cluster = [
-            Node(id=-1, entity=calculation.reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
-            Node(id=-2, entity=calculation.reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
-        ]
-        res = {
-            "cur_cluster": node,
-            "super_cluster": super_cluster,
-            "neibour_cluster": neibour_cluster,
-            "sub_cluster": sub_cluster,
-            "contra_cluster": contra_cluster
+        graph = {
+            "nodes": [{"id": node_id}],
+            "links": []
         }
 
-        self.status = res
+        graph_search_res = [cur_cluster]
+        graph_search_res = graph_search_res.extend(self.graph_search(cur_cluster))
+        print([n.id for n in graph_search_res])
+        super_cluster = self.nodes[node_id].up_lv if self.nodes[node_id].up_lv else None
+
+
+        # neibour_cluster = [n for n in tmp.down_lv if n != node] if tmp else None
+
+        # sub_cluster = node.down_lv if node.down_lv else None
+
+        # c1 = self.reflection_search(query_vector, node, degree=1)
+        # c2 = self.reflection_search(query_vector, node, degree=2)
+        # contra_cluster = [
+        #     Node(id=-1, entity=calculation.reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
+        #     Node(id=-2, entity=calculation.reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
+        # ]
+
+        # self.status = res
         
-        return res
+        return
 
 
