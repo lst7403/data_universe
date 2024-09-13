@@ -58,6 +58,18 @@ class calculation:
         ecul = np.sqrt(norm_vec1**2 + norm_vec2**2 - (2 * norm_vec1 * norm_vec2 * cos))
     
         return cos, ecul
+    
+    def calculate_special_coordinates_with_cos_sim(cos_sim, r):
+        tem_rad = -np.arccos(cos_sim)
+        if cos_sim >= 0:
+            theta_rad = tem_rad+np.pi/4
+        else:
+            theta_rad = tem_rad-np.pi/4
+            # Calculate x and y coordinates using NumPy's cos and sin functions
+        x = r * np.cos(theta_rad)
+        y = r * np.sin(theta_rad)
+        
+        return x, y
 
     def sort_dict():
         pass
@@ -210,19 +222,16 @@ class graph_tree:
 
         return closest_node
     
-    def discovery_search(self, search_vector, node, degree=3):
+    def discovery_search(self, search_vector, node, lv_degree=3):
         reflection_node = node
-        for i in range(degree):
+        for lv in range(lv_degree):
             if reflection_node.up_lv:
                 reflection_node = reflection_node.up_lv
             else:
                 break
-        print(reflection_node.id)
+        print(f"reflection_node: {reflection_node.id} at lv up: {lv}")
 
-        # knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
-        belong_node = self._get_closest_node_within_lv(search_vector, reflection_node, lv=i)
-
-        return 
+        return self.get_sorted_node_within_lv(search_vector, reflection_node, lv=lv)
     
     # discovery_search_helper
     def get_sorted_node_within_lv(self, vector, reflection_node, lv=float("inf")):
@@ -245,7 +254,7 @@ class graph_tree:
             if not queue:
                 break
 
-            print([n.id for n in queue])
+            # print([n.id for n in queue])
             size = len(queue)
 
             for _ in range(size):
@@ -359,11 +368,9 @@ class graph_tree:
 
     
     ############################## get data area
-    def get_graph_data(self, node_id, query_vector=None):
+    def get_midle_graph_data(self, node_id, lv_degree=3, query_vector=None):
         if query_vector is None:
             query_vector = self.nodes[node_id].center
-
-        
 
         # init
         cur_cluster = self.nodes[node_id]
@@ -373,25 +380,11 @@ class graph_tree:
             "links": []
         }
 
-        graph_search_res = [cur_cluster]
-        graph_search_res = graph_search_res.extend(self.graph_search(cur_cluster))
-        print([n.id for n in graph_search_res])
-        super_cluster = self.nodes[node_id].up_lv if self.nodes[node_id].up_lv else None
+        neighbour_clusters = self.discovery_search(query_vector, cur_cluster, lv_degree=lv_degree)
 
 
-        # neibour_cluster = [n for n in tmp.down_lv if n != node] if tmp else None
 
-        # sub_cluster = node.down_lv if node.down_lv else None
-
-        # c1 = self.reflection_search(query_vector, node, degree=1)
-        # c2 = self.reflection_search(query_vector, node, degree=2)
-        # contra_cluster = [
-        #     Node(id=-1, entity=calculation.reflection(query_vector, c1[0].center), center=c1[0], index=c1[1]),
-        #     Node(id=-2, entity=calculation.reflection(query_vector, c2[0].center), center=c2[0], index=c2[1])
-        # ]
-
-        # self.status = res
         
-        return
+        return neighbour_clusters
 
 
