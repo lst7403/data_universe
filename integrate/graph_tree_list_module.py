@@ -212,7 +212,7 @@ class graph_tree:
     
     def discovery_search(self, search_vector, node, degree=3):
         reflection_node = node
-        for i in range(degree):
+        for lv_up in range(degree):
             if reflection_node.up_lv:
                 reflection_node = reflection_node.up_lv
             else:
@@ -220,15 +220,15 @@ class graph_tree:
         print(reflection_node.id)
 
         # knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
-        belong_node = self._get_closest_node_within_lv(search_vector, reflection_node, lv=i)
+        res = self.get_sorted_node_within_lv(search_vector, reflection_node, lv=lv_up+1)
 
-        return 
+        return res
     
     # discovery_search_helper
     def get_sorted_node_within_lv(self, vector, reflection_node, lv=float("inf")):
         if lv < float("inf"):
-            sorted_cos = []
-            sorted_node = []
+            cos_sim = []
+            nodes = []
             euclide_dist = []
             feature_vector = vector - reflection_node.center
             print("generate cos sim, ecul dist, and nodes sorted by cos sim")
@@ -256,10 +256,16 @@ class graph_tree:
 
                     if lv < float("inf"):
                         cur_cos_sim_and_ecul = calculation.cos_sim_and_ecul(feature_vector, cur.center-reflection_node.center)
-                        position = bisect.bisect_left(sorted_cos, cur_cos_sim_and_ecul[0])
-                        sorted_cos.insert(position, cur_cos_sim_and_ecul[0])
+
+                        # cos_sim.append(cur_cos_sim_and_ecul[0])
+                        # euclide_dist.append(cur_cos_sim_and_ecul[1])
+                        # nodes.append(cur)
+
+                        # below is sorted by cos sim
+                        position = bisect.bisect_left(cos_sim, cur_cos_sim_and_ecul[0])
+                        cos_sim.insert(position, cur_cos_sim_and_ecul[0])
                         euclide_dist.insert(position, cur_cos_sim_and_ecul[1])
-                        sorted_node.insert(position, cur)
+                        nodes.insert(position, cur)
 
                     elif lv == float("inf"):
                         cur_dist = calculation.l2(vector, reflection_node.center)
@@ -273,12 +279,12 @@ class graph_tree:
             lv_counter+=1
 
         if lv < float("inf"):
-            # pop isself
-            if sorted_node[-1].id == self.cur:
-                sorted_cos.pop()
+            # pop itself
+            if nodes[-1].id == self.cur:
+                cos_sim.pop()
                 sorted_node.pop()
                 euclide_dist.pop()
-            return {"sorted_cos_sim": sorted_cos, "euclide_dist": euclide_dist, "sorted_nodes": sorted_node}
+            return {"sorted_cos_sim": cos_sim, "euclide_dist": euclide_dist, "sorted_nodes": nodes}
         elif lv == float("inf"):
             return sorted_node
         
