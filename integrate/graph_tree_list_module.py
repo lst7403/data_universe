@@ -224,25 +224,14 @@ class graph_tree:
     
     def discovery_search(self, search_vector, node, lv_degree=3):
         reflection_node = node
-<<<<<<< HEAD
-        for lv_up in range(degree):
-=======
         for lv in range(lv_degree):
->>>>>>> fd9e51e3199e00148029a5cc872de65d753865a7
             if reflection_node.up_lv:
                 reflection_node = reflection_node.up_lv
             else:
                 break
         print(f"reflection_node: {reflection_node.id} at lv up: {lv}")
 
-<<<<<<< HEAD
-        # knn_res = self.fast_knn(reflected_vector, reflection_node, k=k)
-        res = self.get_sorted_node_within_lv(search_vector, reflection_node, lv=lv_up+1)
-
-        return res
-=======
         return self.get_sorted_node_within_lv(search_vector, reflection_node, lv=lv)
->>>>>>> fd9e51e3199e00148029a5cc872de65d753865a7
     
     # discovery_search_helper
     def get_sorted_node_within_lv(self, vector, reflection_node, lv=float("inf")):

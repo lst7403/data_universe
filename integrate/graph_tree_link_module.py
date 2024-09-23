@@ -142,7 +142,7 @@ class graph_tree:
                     
 
             lv += 1
-        print(self.)
+
         self.recom = recom
 
         return 0
