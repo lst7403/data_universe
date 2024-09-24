@@ -59,17 +59,16 @@ class calculation:
     
         return cos, ecul
     
-    def calculate_special_coordinates_with_cos_sim(cos_sim, r):
-        tem_rad = -np.arccos(cos_sim)
-        if cos_sim >= 0:
-            theta_rad = tem_rad+np.pi/4
+    def cos_sim_to_special_radians(cos_similarity):
+        # Validate the input
+        if cos_similarity >= 0:
+            if cos_similarity > 1:
+                return np.pi*3/4
+            return np.pi*3/4 - np.arccos(cos_similarity)
         else:
-            theta_rad = tem_rad-np.pi/4
-            # Calculate x and y coordinates using NumPy's cos and sin functions
-        x = r * np.cos(theta_rad)
-        y = r * np.sin(theta_rad)
-        
-        return x, y
+            if cos_similarity < -1:
+                return np.pi*5/4
+            return np.pi*9/4 - np.arccos(cos_similarity)
 
     def sort_dict():
         pass
