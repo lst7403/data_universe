@@ -223,15 +223,16 @@ class graph_tree:
         return closest_node
     
     def discovery_search(self, search_vector, node, lv_degree=3):
-        reflection_node = node
-        for lv in range(lv_degree):
-            if reflection_node.up_lv:
-                reflection_node = reflection_node.up_lv
-            else:
+        lv_get_up = 0
+        while lv_get_up < lv_degree:
+            if not node.up_lv:
                 break
-        print(f"reflection_node: {reflection_node.id} at lv up: {lv}")
+            node = node.up_lv
+            lv_get_up += 1
 
-        return self.get_sorted_node_within_lv(search_vector, reflection_node, lv=lv)
+        print(f"reflection_node: {node.id} at lv up: {lv_get_up}")
+
+        return self.get_sorted_node_within_lv(search_vector, node, lv=lv_get_up)
     
     # discovery_search_helper
     def get_sorted_node_within_lv(self, vector, reflection_node, lv=float("inf")):
