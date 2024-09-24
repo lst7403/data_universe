@@ -1,0 +1,69 @@
+<div id="canvas"></div>
+<button id="changeColorBtn" onclick="change_color()">Change Color</button>
+
+<script src="https://d3js.org/d3.v7.js"></script>
+
+<script>
+    const width = 400;
+    const height = 400;
+    const radius = 50;
+
+    // 创建 SVG
+    let svg = d3.select('#canvas').append('svg')
+        .attr('width', width)
+        .attr('height', height);
+
+    let group = svg.append('g')
+        .attr('transform', `translate(${width / 2}, ${height/2})`); // 半圆的中心点
+
+    // 生成刻度
+    let ticks = [];
+    for (let i = 0; i <= 90; i += 5) {  // 每隔 10 度生成一个刻度
+        let angle = i * Math.PI / 180 - Math.PI/4;  // 转换成弧度
+        let innerRadius = radius + (i % 30 === 0 ? 15 : 8); // 每 30 度长刻度
+        let outerRadius = radius;
+
+        let x1 = innerRadius * Math.cos(angle);
+        let y1 = innerRadius * Math.sin(angle);
+        let x2 = outerRadius * Math.cos(angle);
+        let y2 = outerRadius * Math.sin(angle);
+
+        ticks.push({
+            x1: x1, y1: y1, x2: x2, y2: y2, angle: i
+        });
+    }
+
+    for (let i = 90; i <= 180; i += 5) {  // 每隔 10 度生成一个刻度
+        let angle = i * Math.PI / 180 + Math.PI/4;  // 转换成弧度
+        let innerRadius = radius + (i % 30 === 0 ? 10 : 5); // 每 30 度长刻度
+        let outerRadius = radius;
+
+        let x1 = innerRadius * Math.cos(angle);
+        let y1 = innerRadius * Math.sin(angle);
+        let x2 = outerRadius * Math.cos(angle);
+        let y2 = outerRadius * Math.sin(angle);
+
+        ticks.push({
+            x1: x1, y1: y1, x2: x2, y2: y2, angle: i
+        });
+    }
+
+    // 绘制刻度线
+    let lines = group.selectAll('line')
+        .data(ticks)
+        .enter()
+        .append('line')
+        .attr('x1', d => d.x1)
+        .attr('y1', d => d.y1)
+        .attr('x2', d => d.x2)
+        .attr('y2', d => d.y2)
+        .attr('stroke-width', 0.5)
+        .attr('stroke', d => `hsla(${d.angle}, 100%, 40%, 1)`);  // 初始化颜色
+
+    // 为按钮添加点击事件，改变刻度颜色
+    function change_color() {
+        lines.transition()
+            .duration(2000)  // 动画时长 2 秒
+            .attr('stroke', d => `hsla(${(d.angle + 270) % 360}, 100%, 45%, 1)`);  // 新颜色
+    };
+</script>
