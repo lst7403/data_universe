@@ -33,9 +33,9 @@
         });
     }
 
-    for (let i = 90; i <= 180; i += 5) {  // 每隔 10 度生成一个刻度
-        let angle = i * Math.PI / 180 + Math.PI/4;  // 转换成弧度
-        let innerRadius = radius + (i % 30 === 0 ? 10 : 5); // 每 30 度长刻度
+    for (let i = 90; i <= 180; i += 5) {
+        let angle = i * Math.PI / 180 + Math.PI/4;
+        let innerRadius = radius + (i % 30 === 0 ? 10 : 5);
         let outerRadius = radius;
 
         let x1 = innerRadius * Math.cos(angle);
@@ -48,8 +48,23 @@
         });
     }
 
+    text = []
+    // create text
+    for (let i = 0; i <= 180; i += 30) {
+        let angle = i * Math.PI / 180 + (i <= 90 ? -Math.PI/4 : Math.PI/4);
+        let innerRadius = radius + (i % 30 === 0 ? 10 : 5);
+        let outerRadius = radius;
+
+        let x = innerRadius * Math.cos(angle);
+        let y = innerRadius * Math.sin(angle);
+
+        ticks.push({
+            x: x, y: y, angle: i
+        });
+    }
+
     // 绘制刻度线
-    let lines = group.selectAll('line')
+    let line = group.selectAll('line')
         .data(ticks)
         .enter()
         .append('line')
