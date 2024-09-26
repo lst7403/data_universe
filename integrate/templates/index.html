@@ -22,20 +22,18 @@
     </div>
     
     <div class="visual-section">
-        <div id="left-info-area">
-            <div class="box" id="tree-info">
-                <p class="header">Tree Diagram</p>
-                <svg id="tree-svg"></svg>
-            </div>
-            <div class="box" id="spiral-info">
-                <p class="header">Left Bottom</p>
-                <p id="left-bottom-node-details"></p>
-            </div>
+
+        <div id="left-area">
+            <div class="box" id="tree-area"></div>
         </div>
+        
+        <div id="middle-area">
+            <div class="box" id="graph-area"></div>
+            <div class="box" id="graph-tree-area"></div>
+        </div>
+        
     
-        <svg id="graph-area"></svg>
-    
-        <div id="right-info-area">
+        <div id="right-area">
             <div class="box" id="super-cluster">
                 <p class="header">Super-cluster</p>
                 <p id="top-node-details"></p>
@@ -56,5 +54,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='curve_axis.js') }}"></script>
+    <script src="{{ url_for('static', filename='graph_tree.js') }}"></script>
+    
 </body>
 </html>

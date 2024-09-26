@@ -7,7 +7,7 @@ body, html {
 
 .box {
     border: 1px solid #ccc;
-    overflow-y: auto;
+    /* overflow-y: auto; */
 }
 
 /* Section styles */
@@ -15,12 +15,10 @@ body, html {
     display: flex;
     height: 100vh;
     width: 100vw;
-    border: 1px solid #ccc;
 }
 
 /* Search area */
 .searching-area {
-    border: 1px solid #ccc;
     height: 100vh;
     width: 50vw;
 }
@@ -32,10 +30,8 @@ body, html {
 
 /* Visual area */
 /* Left info area */
-#left-info-area {
-    display: grid;
-    grid-template-rows: 1fr 1fr;
-    width: 30vw;
+#left-area {
+    width: 20vw;
     height: 100vh;
 }
 
@@ -45,14 +41,23 @@ body, html {
 }
 
 /* Middle graph area */
-#graph-area {
-    border: 1px solid #ccc;
+#middle-area {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    width: 50vw;
     height: 100vh;
-    width: 40vw;
+}
+
+#graph-area {
+    height: 20vh;
+}
+
+#graph-tree-area {
+    height: 80vh;
 }
 
 /* Right info area */
-#right-info-area {
+#right-area {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;

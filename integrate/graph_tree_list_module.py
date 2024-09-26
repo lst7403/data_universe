@@ -69,6 +69,9 @@ class calculation:
             if cos_similarity < -1:
                 return np.pi*5/4
             return np.pi*9/4 - np.arccos(cos_similarity)
+    
+    def radian_to_x_y(radian, dist):
+        return [dist*np.cos(radian), dist*np.sin(radian)]
 
     def sort_dict():
         pass
@@ -221,7 +224,11 @@ class graph_tree:
 
         return closest_node
     
-    def discovery_search(self, search_vector, node, lv_degree=3):
+    def discovery_search(self, node, search_vector=None, lv_degree=2):
+
+        if search_vector is None:
+            search_vector = node.center
+
         lv_get_up = 0
         while lv_get_up < lv_degree:
             if not node.up_lv:
@@ -374,23 +381,20 @@ class graph_tree:
 
     
     ############################## get data area
-    def get_midle_graph_data(self, node_id, lv_degree=3, query_vector=None):
+    def get_neighbour_cluster_data(self, node_id, lv_degree=2, query_vector=None):
         if query_vector is None:
             query_vector = self.nodes[node_id].center
 
-        # init
-        cur_cluster = self.nodes[node_id]
+        tmp_discovery_search_res = self.discovery_search(self.nodes[node_id], search_vector=query_vector, lv_degree=2)
 
-        graph = {
-            "nodes": [{"id": node_id}],
-            "links": []
-        }
-
-        neighbour_clusters = self.discovery_search(query_vector, cur_cluster, lv_degree=lv_degree)
-
-
-
+        circle_ratio_base = len(tmp_discovery_search_res["sorted_nodes"][-1].index)
+        # create circle data
+        neighbour_data = [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
+                           "cos_sim": tmp_discovery_search_res["sorted_cos_sim"][i],
+                           "euclide_dist": tmp_discovery_search_res["euclide_dist"][i],
+                           "r_ratio": len(tmp_discovery_search_res["sorted_nodes"][i].index)/circle_ratio_base}
+                           for i in range(len(tmp_discovery_search_res["sorted_nodes"]))]
         
-        return neighbour_clusters
+        return neighbour_data
 
 
