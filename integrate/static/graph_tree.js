@@ -1,11 +1,11 @@
-const graph_tree_base_node_r = 25;
+const graph_tree_base_node_r = 30;
 
 // Sample data
 let got_data = [
-    {'id': 74, 'cos_sim': -0.3249267290917288, 'euclide_dist': 10, 'r_ratio': 1.5384615384615385},
-    {'id': 111, 'cos_sim': -0.11059286214225257, 'euclide_dist': 6, 'r_ratio': 2},
-    {'id': 28, 'cos_sim': 0.7107, 'euclide_dist': 14, 'r_ratio': 0.5},
-    {'id': 18, 'cos_sim': -0.9, 'euclide_dist': 0, 'r_ratio': 2},
+    {'id': 74, 'cos_sim': -0.3249267290917288, 'euclide_dist': 10, 'r_ratio': 1.5},
+    {'id': 111, 'cos_sim': -0.11059286214225257, 'euclide_dist': 6, 'r_ratio': 1.5},
+    {'id': 28, 'cos_sim': 0.7107, 'euclide_dist': 14, 'r_ratio': 2},
+    {'id': 18, 'cos_sim': -1, 'euclide_dist': 2, 'r_ratio': 2},
     {'id': 37, 'cos_sim': 1, 'euclide_dist': 0, 'r_ratio': 1.0},
 ];
 
@@ -65,7 +65,7 @@ for (let i = 0; i < got_data.length; i++) {
             id: got_data[i].id,
             x: graph_tree_width / 2,
             y: graph_tree_height / 2,
-            r: 25 * got_data[i].r_ratio,
+            r: graph_tree_base_node_r * got_data[i].r_ratio,
             angle: 0
         });
         break

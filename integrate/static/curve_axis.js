@@ -4,7 +4,7 @@ const graph_tree_container = d3.select("#graph-tree-area");
 const graph_tree_width = graph_tree_container.node().clientWidth;  // Get the width in pixels
 const graph_tree_height = graph_tree_container.node().clientHeight; // Get the height in pixels
 
-const graph_tree_axis_radius = 50;
+const graph_tree_axis_radius = 60;
 const text_to_axis_margin = 2;
 const short_tick_len = 6;
 const stroke_width = 0.6;
