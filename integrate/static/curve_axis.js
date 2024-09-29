@@ -15,6 +15,7 @@ let graph_tree_svg = graph_tree_container.append('svg')
     .attr('height', graph_tree_height);
 
 let group = graph_tree_svg.append('g')
+    .classed("axis", 1)
     .attr('transform', `translate(${graph_tree_width / 2}, ${graph_tree_height / 2})`);
 
 // 生成刻度
@@ -106,12 +107,12 @@ let axis_text = group.selectAll('text')
 //     .attr("stroke", "blue")
 //     .attr("fill", "none");
 
-a = group.append('circle')
-    .attr('cx', 0)
-    .attr('cy', 0)
-    .attr('r', 25)
-    .attr("stroke", "blue")
-    .attr("fill", "none");
+// a = group.append('circle')
+//     .attr('cx', 0)
+//     .attr('cy', 0)
+//     .attr('r', 25)
+//     .attr("stroke", "blue")
+//     .attr("fill", "none");
 
 function change_color() {
     let duration = 1000;

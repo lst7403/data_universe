@@ -69,9 +69,6 @@ class calculation:
             if cos_similarity < -1:
                 return np.pi*5/4
             return np.pi*9/4 - np.arccos(cos_similarity)
-    
-    def radian_to_x_y(radian, dist):
-        return [dist*np.cos(radian), dist*np.sin(radian)]
 
     def sort_dict():
         pass
