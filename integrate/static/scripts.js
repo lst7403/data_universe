@@ -95,62 +95,24 @@ function sendSliderValues() {
     }, {});
 
     postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
-        .then(data => {renderGraph(data.data);});
+        .then(data => {render_graph_tree(data.graph_tree_data);});
 };
 
 // func of recom button clicked
 function handleRecomClick(id, value) {
     document.querySelector('.visual-section').scrollIntoView({ behavior: 'smooth' });
     postData('/handle_recom', { "buttonId": id, "val": value }, postID = "send recom click")
-        .then(data => {renderGraph(data);});
+        .then(data => {render_graph_tree(data.graph_tree_data);});
 };
 
-// Fetch and render graph data
-getData(url = '/graph-data', getID = "get graph")
-    .then(data => {renderGraph(data);});
+// Fetch and render graph_tree data
+getData(url = '/graph_tree_data', getID = "get_graph_tree")
+    .then(data => {render_graph_tree(data);});
 
-function renderGraph(data) {
-    const svg = d3.select("#graph-area");
 
-    svg.selectAll("*").remove();
-
-    if (data.length > 1) {
-        svg.selectAll("line")
-            .data(data.slice(1))
-            .enter()
-            .append("line")
-            .attr("class", "link")
-            .attr("x1", d => data[0].x)
-            .attr("y1", d => data[0].y)
-            .attr("x2", d => d.x)
-            .attr("y2", d => d.y);
-    }
-
-    const nodeGroups = svg.selectAll("g.node-group")
-        .data(data)
-        .enter()
-        .append("g")
-        .attr("class", "node-group")
-        .attr("transform", d => `translate(${d.x},${d.y})`);
-
-    nodeGroups.append("circle")
-        .attr("class", "node")
-        .attr("r", 20)
-        .attr("fill", d => d.color);
-
-    nodeGroups.append("text")
-        .attr("class", "node-text")
-        .attr("dx", 0)
-        .attr("dy", ".35em")
-        .text(d => d.id);
-};
-
-    
 // Fetch and render tree data
-getData(url = '/tree-data', getID = "get tree")
-    .then(data => {
-        renderTree(data);
-    });
+getData(url = '/tree_data', getID = "get tree")
+    .then(data => {renderTree(data);});
 
 function renderTree(data) {
     const width = 600, height = 600;

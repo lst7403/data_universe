@@ -46,18 +46,20 @@ class calculation:
     def translate_to_norm_vector(original_vector, max, min):
         return (original_vector - min)/(max - min)
     
-    def cos_sim_and_ecul(vec1, vec2):
-        # Calculate dot product between vec1 and vec2
-        dot_product = np.dot(vec1, vec2)
-        
+    def cos_sim(vec1, vec2):
         # Calculate magnitudes (norms) of vec1 and vec2
         norm_vec1 = np.linalg.norm(vec1)
         norm_vec2 = np.linalg.norm(vec2)
 
-        cos = dot_product / (norm_vec1 * norm_vec2)
-        ecul = np.sqrt(norm_vec1**2 + norm_vec2**2 - (2 * norm_vec1 * norm_vec2 * cos))
-    
-        return cos, ecul
+        if norm_vec1 == 0 or norm_vec2 == 0:
+            return 1
+
+        # Calculate dot product between vec1 and vec2
+        cos_sim = np.dot(vec1, vec2) / (norm_vec1 * norm_vec2)
+
+        return cos_sim
+
+            
     
     def cos_sim_to_special_radians(cos_similarity):
         # Validate the input
@@ -268,16 +270,12 @@ class graph_tree:
                     # print("cal")
 
                     if lv < float("inf"):
-                        cur_cos_sim_and_ecul = calculation.cos_sim_and_ecul(feature_vector, cur.center-reflection_node.center)
+                        cur_cos_sim = calculation.cos_sim(feature_vector, cur.center-reflection_node.center)
 
-                        # cos_sim.append(cur_cos_sim_and_ecul[0])
-                        # euclide_dist.append(cur_cos_sim_and_ecul[1])
-                        # nodes.append(cur)
-
-                        # below is sorted by cos sim
-                        position = bisect.bisect_left(cos_sim, cur_cos_sim_and_ecul[0])
-                        cos_sim.insert(position, cur_cos_sim_and_ecul[0])
-                        euclide_dist.insert(position, cur_cos_sim_and_ecul[1])
+                        # sorted by cos sim
+                        position = bisect.bisect_left(cos_sim, cur_cos_sim)
+                        cos_sim.insert(position, cur_cos_sim)
+                        euclide_dist.insert(position, calculation.l2(vector, cur.center))
                         nodes.insert(position, cur)
 
                     elif lv == float("inf"):
@@ -292,11 +290,6 @@ class graph_tree:
             lv_counter+=1
 
         if lv < float("inf"):
-            # pop itself
-            if nodes[-1].id == self.cur:
-                cos_sim.pop()
-                sorted_node.pop()
-                euclide_dist.pop()
             return {"sorted_cos_sim": cos_sim, "euclide_dist": euclide_dist, "sorted_nodes": nodes}
         elif lv == float("inf"):
             return sorted_node
