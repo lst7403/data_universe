@@ -173,7 +173,8 @@ function update_circles_links(circle_data, link_data) {
         .transition()
         .duration(circle_transition_time)
         .attr("x", d => d.x)
-        .attr("y", d => d.y);
+        .attr("y", d => d.y)
+        .style("font-size", d => Math.max(14, d.r*0.3));
 
     // Append new links with a fade-in effect
     links.enter().append("line")
@@ -210,9 +211,9 @@ function update_circles_links(circle_data, link_data) {
         .attr("x", d => d.x)
         .attr("y", d => d.y)
         .attr("class", "cluster_lable")
-        .style("text-anchor", "middle")
-        .style("text-anchor", "middle")
-        .style("dominant-baseline", "central")
+        .style("font-size", d => Math.max(14, d.r*0.3))
+        // .style("text-anchor", "middle")
+        // .style("dominant-baseline", "central")
         .text(d => d.id)
         .on("click", function(event, d) {
             graph_tree_circle_clicked(d.id)
