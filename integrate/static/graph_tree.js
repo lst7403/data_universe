@@ -1,7 +1,7 @@
 let graph_tree_base_node_r = 30;
 let circle_transition_time = 2500;
 let max_circle_ratio = 2;
-let cur_color_angle = 0;
+
 
 // // Sample data
 // let got_data = [
@@ -52,6 +52,10 @@ function circle_size_scaler(x) {
 // let circle_size_scaler = d3.scaleLinear()
 //     .domain([0, 1])
 //     .range([0.5, 1])
+
+function hsla(angle, saturation, lightness, alpha) {
+    return `hsla(${angle}, ${saturation}%, ${lightness}%, ${alpha})`
+}
 
 // Function to calculate x, y, and angle
 function cal_x_y_angle(cos_sim, dist) {
@@ -158,7 +162,7 @@ function update_circles_links(circle_data, link_data) {
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
         .attr("y2", d => d.y2)
-        .attr("stroke", d => `hsla(${d.angle}, 100%, 30%, 0.4)`)
+        .attr("stroke", d => hsla(d.angle, 100, 30, 0.4))
 
     circles
         .transition()
@@ -166,8 +170,8 @@ function update_circles_links(circle_data, link_data) {
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
-        .attr("fill", d => `hsla(${d.angle}, 100%, 50%, 0.4)`)
-        .attr("stroke", d => `hsla(${d.angle}, 100%, 30%, 0.4)`);
+        .attr("fill", d => hsla((d.angle + cur_color_angle) % 360, 100, 50, 0.4))
+        .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4));
 
     texts
         .transition()
@@ -182,7 +186,7 @@ function update_circles_links(circle_data, link_data) {
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
         .attr("y2", d => d.y2)
-        .attr("stroke", d => `hsla(${d.angle}, 100%, 30%, 0.4)`)
+        .attr("stroke", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 30%, 0.4)`)
         .attr("class", "cluster_link")
             .style("opacity", 0)  // Start invisible
             .transition()
@@ -194,8 +198,8 @@ function update_circles_links(circle_data, link_data) {
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
-        .attr("fill", d => `hsla(${d.angle}, 100%, 50%, 0.4)`)
-        .attr("stroke", d => `hsla(${d.angle}, 100%, 30%, 0.4)`)         // Add stroke color
+        .attr("fill", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 50%, 0.4)`)
+        .attr("stroke", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 30%, 0.4)`)         // Add stroke color
         .attr("stroke-width", 1)
         .attr("class", "cluster_circle")
         .on("click", function(event, d) {
