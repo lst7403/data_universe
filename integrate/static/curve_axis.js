@@ -1,14 +1,20 @@
-const graph_tree_container = d3.select("#graph-tree-area");
+let cur_color_angle = 180;
+
+function hsla(angle, saturation, lightness, alpha) {
+    return `hsla(${angle}, ${saturation}%, ${lightness}%, ${alpha})`
+}
+
+let graph_tree_container = d3.select("#graph-tree-area");
 
 // Get the dimensions of the container
-const graph_tree_width = graph_tree_container.node().clientWidth;  // Get the width in pixels
-const graph_tree_height = graph_tree_container.node().clientHeight; // Get the height in pixels
+let graph_tree_width = graph_tree_container.node().clientWidth;  // Get the width in pixels
+let graph_tree_height = graph_tree_container.node().clientHeight; // Get the height in pixels
 
-const graph_tree_axis_radius = 60;
-const text_to_axis_margin = 2;
-const short_tick_len = 6;
-const stroke_width = 0.6;
-const font_size = 14;
+let graph_tree_axis_radius = 60;
+let text_to_axis_margin = 2;
+let short_tick_len = 6;
+let stroke_width = 0.6;
+let font_size = 14;
 
 let graph_tree_svg = graph_tree_container.append('svg')
     .attr('width', graph_tree_width)
@@ -60,7 +66,7 @@ let axis = group.selectAll('line')
         .attr('x2', d => d.x2)
         .attr('y2', d => d.y2)
         .attr('stroke-width', d => (d.angle % 30 === 0 ? stroke_width/1.5 : stroke_width)) //  
-        .attr('stroke', d => `hsla(${d.angle}, 100%, 40%, 1)`);  // 初始化颜色
+        .attr('stroke', d => hsla((d.angle + cur_color_angle) % 360, 100, 40, 1));  // 初始化颜色
 
 let texts = [];
 // Create text for the right side (0-90 degrees)
@@ -91,28 +97,14 @@ let axis_text = group.selectAll('text')
     .data(texts)
     .enter()
         .append('text')
-        .text(d => d.angle+"")
+        .text(d => d.angle)
         .attr('x', d => d.x)
         .attr('y', d => d.y)
-        .attr('fill', d => `hsla(${d.angle}, 100%, 40%, 1)`)
+        .attr('fill', d => hsla((d.angle + cur_color_angle) % 360, 100, 40, 1))
         .attr("font-size", font_size)
         .attr("text-anchor", d => d.anchor)
         .attr("dominant-baseline", "middle")
         .attr("transform", d => `rotate(${d.anchor === "end" ? d.angle - 45 : d.angle -135 }, ${d.x}, ${d.y})`);
-
-// a = group.append('circle')
-//     .attr('cx', 0)
-//     .attr('cy', 0)
-//     .attr('r', radius - text_to_axis_margin - 1.8*font_size - 2)
-//     .attr("stroke", "blue")
-//     .attr("fill", "none");
-
-// a = group.append('circle')
-//     .attr('cx', 0)
-//     .attr('cy', 0)
-//     .attr('r', 25)
-//     .attr("stroke", "blue")
-//     .attr("fill", "none");
 
 function change_color() {
     let duration = 1000;
@@ -120,10 +112,10 @@ function change_color() {
     // Update color for lines
     axis.transition()
         .duration(duration)
-        .attr('stroke', d => `hsla(${(d.angle + cur_color_ang) % 360}, 100%, 45%, 1)`);
+        .attr('stroke', d => hsla((d.angle + cur_color_angle) % 360, 100, 45, 1));
 
     // Update color for text
     axis_text.transition()
         .duration(duration)
-        .attr('fill', d => `hsla(${(d.angle + cur_color_ang) % 360}, 100%, 45%, 1)`);
+        .attr('fill', d => hsla((d.angle + cur_color_angle) % 360, 100, 45, 1));
 }
