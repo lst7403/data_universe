@@ -1,7 +1,5 @@
 let graph_tree_base_node_r = 30;
-let circle_transition_time = 2500;
 let max_circle_ratio = 2;
-
 
 // // Sample data
 // let got_data = [
@@ -53,27 +51,6 @@ function circle_size_scaler(x) {
 //     .domain([0, 1])
 //     .range([0.5, 1])
 
-function hsla(angle, saturation, lightness, alpha) {
-    return `hsla(${angle}, ${saturation}%, ${lightness}%, ${alpha})`
-}
-
-// Function to calculate x, y, and angle
-function cal_x_y_angle(cos_sim, dist) {
-    let normal_radian = Math.acos(cos_sim);
-    let angle = normal_radian * (180 / Math.PI);
-    let special_radian = normal_radian + (cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4);
-
-    let x = dist * Math.cos(special_radian);
-    let y = dist * Math.sin(special_radian);
-
-    return [x, y, angle];
-}
-
-function cal_x1_x2_y1_y2(cos_sim, dist) {
-    let [x1, y1, angle] = cal_x_y_angle(cos_sim, graph_tree_base_node_r)
-    let [x2, y2, foo2] = cal_x_y_angle(cos_sim, dist)
-    return [x1, y1, x2, y2, angle]
-}
 
 function server_data_to_graph_data(server_data) {
 
@@ -96,20 +73,25 @@ function server_data_to_graph_data(server_data) {
 
     // push other circles
     for (let i = 0; i < server_data.length-1; i++) {
+        let cur_cos_sim = server_data[i].cos_sim
+        let radian = Math.acos(cur_cos_sim)
+        let cur_angle = rad_2_ang(radian)
+        let special_radian = radian + (cur_cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4)
+
         let cur_r = graph_tree_base_node_r * circle_size_scaler(server_data[i].r_ratio);
         let cur_dist = euclide_scaler(server_data[i].euclide_dist);
-        let [x, y, angle_circle] = cal_x_y_angle(server_data[i].cos_sim, cur_dist);
+        let [x, y] = cal_x_y(special_radian, cur_dist);
         
         translated_graph_tree_circles_data.push({
             id: server_data[i].id,
             x: x + graph_tree_width / 2,
             y: y + graph_tree_height / 2,
             r: cur_r,
-            angle: angle_circle,
+            angle: cur_angle,
             dist: cur_dist,
         });
 
-        let [x1, y1, x2, y2, angle_link] = cal_x1_x2_y1_y2(server_data[i].cos_sim, cur_dist - cur_r);
+        let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
 
         translated_graph_tree_links_data.push({
             id: server_data[i].id,
@@ -117,76 +99,98 @@ function server_data_to_graph_data(server_data) {
             y1: y1 + graph_tree_height / 2,
             x2: x2 + graph_tree_width / 2,
             y2: y2 + graph_tree_height / 2,
-            angle: angle_link,
+            angle: cur_angle,
         });
     }
     
     return [translated_graph_tree_circles_data, translated_graph_tree_links_data]
 }
 
-function update_circles_links(circle_data, link_data) {
-    let circles = graph_tree_svg.selectAll(".cluster_circle")
-        .data(circle_data, d => d.id);
-
-    let texts = graph_tree_svg.selectAll(".cluster_lable")
-        .data(circle_data, d => d.id);
-
-    let links = graph_tree_svg.selectAll(".cluster_link")
-    .data(link_data, d => d.id)
-
-    // Remove circles that are not in the new data with a fade-out transition
-    links.exit()
+function custom_exit(updated_data, duration) {
+    let exited_data = updated_data.exit()
         .transition()
-        .duration(circle_transition_time)
+        .duration(duration)
         .style("opacity", 0)
-        .remove();
+        .remove()
 
-    circles.exit()
+    return exited_data
+}
+
+function custom_link_update(links_update, duration) {
+    links_update
         .transition()
-        .duration(circle_transition_time)
-        .style("opacity", 0)
-        .remove();
-
-    texts.exit()
-        .transition()
-        .duration(circle_transition_time)
-        .style("opacity", 0)
-        .remove();
-
-
-    // Update existing circles (matching ids) with transitions
-    links
-        .transition()
-        .duration(circle_transition_time)
+        .duration(duration)
         .attr("x1", d => d.x1)
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
         .attr("y2", d => d.y2)
-        .attr("stroke", d => hsla(d.angle, 100, 30, 0.4))
+        .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
 
-    circles
+    return links_update
+}
+
+function custom_circle_update(circles_update, duration) {
+    circles_update
         .transition()
-        .duration(circle_transition_time)
+        .duration(duration)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
         .attr("fill", d => hsla((d.angle + cur_color_angle) % 360, 100, 50, 0.4))
         .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4));
 
-    texts
+        return circles_update
+}
+
+function custom_text_update(texts_update, duration) {
+    texts_update
         .transition()
-        .duration(circle_transition_time)
+        .duration(duration)
         .attr("x", d => d.x)
         .attr("y", d => d.y)
         .style("font-size", d => Math.max(14, d.r*0.3));
+}
+
+function update_circles_links(circle_data, link_data) {
+    // let links = graph_tree_svg.selectAll(".cluster_link")
+    // console.log("links", links)
+
+    let circles_update = graph_tree_svg.selectAll(".cluster_circle")
+        .data(circle_data, d => d.id);
+
+    let texts_update = graph_tree_svg.selectAll(".cluster_label")
+        .data(circle_data, d => d.id);
+
+    let links_update = graph_tree_svg.selectAll(".cluster_link")
+        .data(link_data, d => d.id)
+
+    let links_exited = custom_exit(links_update, circle_transition_time)
+    let circles_exited = custom_exit(circles_update, circle_transition_time)
+    let texts_exited = custom_exit(texts_update, circle_transition_time)
+
+    console.log("hi", circles_exited.length)
+
+    // // Add .on("end") for each exit selection individually
+    // let links_updated = links_exited.on("end", function() {
+    //     custom_link_update(links_update, circle_transition_time)
+    // });
+
+    // let circles_updated = circles_exited.on("end", function() {
+    //     custom_circle_update(circles_update, circle_transition_time)
+    // });
+
+    // let texts_updated = texts_exited.on("end", function() {
+    //     custom_text_update(texts_update, circle_transition_time)
+    // });
 
     // Append new links with a fade-in effect
-    links.enter().append("line")
+    links_enter = links_update.enter()
+        .append("line")
         .attr("x1", d => d.x1)
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
         .attr("y2", d => d.y2)
-        .attr("stroke", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 30%, 0.4)`)
+        .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
         .attr("class", "cluster_link")
             .style("opacity", 0)  // Start invisible
             .transition()
@@ -194,7 +198,8 @@ function update_circles_links(circle_data, link_data) {
             .style("opacity", 1);  // Fade in
 
     // Append new circles with a fade-in effect
-    circles.enter().append("circle")
+    circles_enter = circles_update.enter()
+        .append("circle")
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
@@ -211,13 +216,12 @@ function update_circles_links(circle_data, link_data) {
             .style("opacity", 1);  // Fade in
 
     // Append new text elements with fade-in effect
-    texts.enter().append("text")
+    texts_enter = texts_update.enter()
+        .append("text")
         .attr("x", d => d.x)
         .attr("y", d => d.y)
-        .attr("class", "cluster_lable")
+        .attr("class", "cluster_label")
         .style("font-size", d => Math.max(14, d.r*0.3))
-        // .style("text-anchor", "middle")
-        // .style("dominant-baseline", "central")
         .text(d => d.id)
         .on("click", function(event, d) {
             graph_tree_circle_clicked(d.id)
@@ -225,14 +229,12 @@ function update_circles_links(circle_data, link_data) {
             .style("opacity", 0)  // Start invisible
             .transition()
             .duration(circle_transition_time)
-            .style("opacity", 1);  // Fade in
-
-    d3.select("line").lower();
+            .style("opacity", 1);  // Fade in   
 }
 
 function render_graph_tree(server_data) {
-    console.log(server_data)
     let [new_circle_data, new_link_data] = server_data_to_graph_data(server_data);
+    console.log("new_graph_tree_data", new_circle_data, new_link_data)
     update_circles_links(new_circle_data, new_link_data)
 }
 

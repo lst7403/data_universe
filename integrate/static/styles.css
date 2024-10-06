@@ -79,7 +79,7 @@ body, html {
     fill: none;
 }
 
-.cluster_lable {
+.cluster_label {
     fill: black;
     text-anchor: middle;
     dominant-baseline: central;
