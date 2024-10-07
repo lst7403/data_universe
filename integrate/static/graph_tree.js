@@ -107,53 +107,102 @@ function server_data_to_graph_data(server_data) {
 }
 
 function custom_exit(updated_data, duration) {
-    let exited_data = updated_data.exit()
+    return updated_data.exit()
         .transition()
         .duration(duration)
         .style("opacity", 0)
         .remove()
-
-    return exited_data
 }
 
-function custom_link_update(links_update, duration) {
+function custom_link_update(links_update, delay, duration) {
     links_update
         .transition()
+        .delay(delay)
         .duration(duration)
         .attr("x1", d => d.x1)
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
         .attr("y2", d => d.y2)
         .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
-
-    return links_update
 }
 
-function custom_circle_update(circles_update, duration) {
+function custom_circle_update(circles_update, delay, duration) {
     circles_update
         .transition()
+        .delay(delay)
         .duration(duration)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
         .attr("fill", d => hsla((d.angle + cur_color_angle) % 360, 100, 50, 0.4))
         .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4));
-
-        return circles_update
 }
 
-function custom_text_update(texts_update, duration) {
+function custom_text_update(texts_update, delay, duration) {
     texts_update
         .transition()
+        .delay(delay)
         .duration(duration)
         .attr("x", d => d.x)
         .attr("y", d => d.y)
         .style("font-size", d => Math.max(14, d.r*0.3));
 }
 
+function custom_link_enter(links_update, delay, duration) {
+    links_update.enter()
+        .append("line")
+        .attr("x1", d => d.x1)
+        .attr("y1", d => d.y1)
+        .attr("x2", d => d.x2)
+        .attr("y2", d => d.y2)
+        .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
+        .attr("class", "cluster_link")
+            .style("opacity", 0)  // Start invisible
+            .transition()
+            .delay(delay)
+            .duration(duration)
+            .style("opacity", 1);  // Fade in
+}
+
+function custom_circle_enter(circles_update, delay, duration) {
+    circles_update.enter()
+        .append("circle")
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("r", d => d.r)
+        .attr("fill", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 50%, 0.4)`)
+        .attr("stroke", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 30%, 0.4)`)         // Add stroke color
+        .attr("stroke-width", 1)
+        .attr("class", "cluster_circle")
+        .on("click", function(event, d) {
+            graph_tree_circle_clicked(d.id)
+        })
+            .style("opacity", 0)  // Start invisible
+            .transition()
+            .delay(delay)
+            .duration(duration)
+            .style("opacity", 1);  // Fade in
+}
+
+function custom_text_enter(texts_update, delay, duration) {
+    texts_update.enter()
+        .append("text")
+        .attr("x", d => d.x)
+        .attr("y", d => d.y)
+        .attr("class", "cluster_label")
+        .style("font-size", d => Math.max(14, d.r*0.3))
+        .text(d => d.id)
+        .on("click", function(event, d) {
+            graph_tree_circle_clicked(d.id)
+        })
+            .style("opacity", 0)  // Start invisible
+            .transition()
+            .delay(delay)
+            .duration(duration)
+            .style("opacity", 1);  // Fade in
+}
+
 function update_circles_links(circle_data, link_data) {
-    // let links = graph_tree_svg.selectAll(".cluster_link")
-    // console.log("links", links)
 
     let circles_update = graph_tree_svg.selectAll(".cluster_circle")
         .data(circle_data, d => d.id);
@@ -168,68 +217,17 @@ function update_circles_links(circle_data, link_data) {
     let circles_exited = custom_exit(circles_update, circle_transition_time)
     let texts_exited = custom_exit(texts_update, circle_transition_time)
 
-    console.log("hi", circles_exited.length)
+    let update_delay = (circles_exited.size() > 0 ? circle_transition_time : 0)
+    let enter_delay = (circles_update.size() > 0 ? update_delay + circle_transition_time : update_delay)
 
-    // // Add .on("end") for each exit selection individually
-    // let links_updated = links_exited.on("end", function() {
-    //     custom_link_update(links_update, circle_transition_time)
-    // });
+    custom_link_update(links_update, update_delay, circle_transition_time)
+    custom_circle_update(circles_update, update_delay, circle_transition_time)
+    custom_text_update(texts_update, update_delay, circle_transition_time)
 
-    // let circles_updated = circles_exited.on("end", function() {
-    //     custom_circle_update(circles_update, circle_transition_time)
-    // });
-
-    // let texts_updated = texts_exited.on("end", function() {
-    //     custom_text_update(texts_update, circle_transition_time)
-    // });
-
-    // Append new links with a fade-in effect
-    links_enter = links_update.enter()
-        .append("line")
-        .attr("x1", d => d.x1)
-        .attr("y1", d => d.y1)
-        .attr("x2", d => d.x2)
-        .attr("y2", d => d.y2)
-        .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
-        .attr("class", "cluster_link")
-            .style("opacity", 0)  // Start invisible
-            .transition()
-            .duration(circle_transition_time)
-            .style("opacity", 1);  // Fade in
-
-    // Append new circles with a fade-in effect
-    circles_enter = circles_update.enter()
-        .append("circle")
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("r", d => d.r)
-        .attr("fill", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 50%, 0.4)`)
-        .attr("stroke", d => `hsla(${(d.angle + cur_color_angle) % 360}, 100%, 30%, 0.4)`)         // Add stroke color
-        .attr("stroke-width", 1)
-        .attr("class", "cluster_circle")
-        .on("click", function(event, d) {
-            graph_tree_circle_clicked(d.id)
-        })
-            .style("opacity", 0)  // Start invisible
-            .transition()
-            .duration(circle_transition_time)
-            .style("opacity", 1);  // Fade in
-
-    // Append new text elements with fade-in effect
-    texts_enter = texts_update.enter()
-        .append("text")
-        .attr("x", d => d.x)
-        .attr("y", d => d.y)
-        .attr("class", "cluster_label")
-        .style("font-size", d => Math.max(14, d.r*0.3))
-        .text(d => d.id)
-        .on("click", function(event, d) {
-            graph_tree_circle_clicked(d.id)
-        })
-            .style("opacity", 0)  // Start invisible
-            .transition()
-            .duration(circle_transition_time)
-            .style("opacity", 1);  // Fade in   
+    custom_link_enter(links_update, enter_delay, circle_transition_time)
+    custom_circle_enter(circles_update, enter_delay, circle_transition_time)
+    custom_text_enter(texts_update, enter_delay, circle_transition_time)
+    
 }
 
 function render_graph_tree(server_data) {
