@@ -56,59 +56,67 @@ function translate_neighbour_data(data, scaler) {
     let cur_r = graph_tree_base_node_r * circle_size_scaler(data[i].r_ratio);
     let cur_dist = scaler(data[i].euclide_dist);
     let [x, y] = cal_x_y(special_radian, cur_dist);
-    circle_data = {
+
+
+    let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
+
+    return [{
         id: data[i].id,
         x: x + graph_tree_width / 2,
         y: y + graph_tree_height / 2,
         r: cur_r,
         angle: cur_angle,
         dist: cur_dist,
-    }
-
-    let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
-
-    link_data = {
+    }, {
         id: server_data[i].id,
         x1: x1 + graph_tree_width / 2,
         y1: y1 + graph_tree_height / 2,
         x2: x2 + graph_tree_width / 2,
         y2: y2 + graph_tree_height / 2,
         angle: cur_angle,
-    }
-
-    return [circle_data, link_data]
+    }]
 }
 
-function translate_child_data(data, scaler) {
+function translate_child_data(data, base_child_x_gap, base_child_y_gap) {
+    let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
+    let x = graph_tree_width / 2 + base_child_x_gap * data.dx
+    let y = graph_tree_height / 2 + graph_tree_base_node_r + base_child_y_gap * data.dy
 
-    let radian = Math.acos(cur_cos_sim)
-    let cur_angle = rad_2_ang(radian)
-    let special_radian = radian + (cur_cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4)
-
-    let cur_r = graph_tree_base_node_r * circle_size_scaler(data[i].r_ratio);
-    let cur_dist = scaler(data[i].euclide_dist);
-    let [x, y] = cal_x_y(special_radian, cur_dist);
-    circle_data = {
-        id: data[i].id,
-        x: x + graph_tree_width / 2,
-        y: y + graph_tree_height / 2,
+    return [{
+        id: data.id,
+        x: x,
+        y: y,
         r: cur_r,
         angle: cur_angle,
-        dist: cur_dist,
-    }
-
-    let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
-
-    link_data = {
-        id: server_data[i].id,
-        x1: x1 + graph_tree_width / 2,
-        y1: y1 + graph_tree_height / 2,
-        x2: x2 + graph_tree_width / 2,
-        y2: y2 + graph_tree_height / 2,
+    }, {
+        id: data.id,
+        x1: graph_tree_width / 2,
+        y1: graph_tree_height / 2 + graph_tree_base_node_r,
+        x2: x,
+        y2: y - cur_r,
         angle: cur_angle,
-    }
+    }]
+}
 
-    return [circle_data, link_data]
+function translate_parent_data(data) {
+    let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
+    let y = graph_tree_height / 2 - graph_tree_base_node_r
+    let x = graph_tree_width / 2
+    
+    return [{
+        id: data.id,
+        x: x,
+        y: y - cur_r,
+        r: cur_r,
+        angle: cur_angle,
+    }, {
+        id: data.id,
+        x1: x,
+        y1: graph_tree_height / 2 + graph_tree_base_node_r,
+        x2: x,
+        y2: y,
+        angle: cur_angle,
+    }]
 }
 
 
@@ -136,12 +144,28 @@ function server_data_to_graph_data(server_data) {
     for (let i = 0; i < server_data.length; i++) {
         switch (server_data[i].cluster_type){
             case "neighbour":
-                let [circle, link]  = translate_neighbour_data(data, scaler)
-                translated_graph_tree_circles_data.push(circle);
-                translated_graph_tree_links_data.push(link);
+                let [neighbour_circle, neighbour_link]  = translate_neighbour_data(server_data[i], scaler)
+                translated_graph_tree_circles_data.push(neighbour_circle);
+                translated_graph_tree_links_data.push(neighbour_link);
                 break
             case "child":
-
+                let [child_circle, child_link]  = translate_child_data(server_data[i], graph_tree_base_node_r, graph_tree_base_node_r)
+                translated_graph_tree_circles_data.push(child_circle);
+                translated_graph_tree_links_data.push(child_link);
+                break
+            case "parent":
+                let [parent_circle, parent_link] = translate_parent_data(server_data[i])
+                translated_graph_tree_circles_data.push(parent_circle);
+                translated_graph_tree_links_data.push(parent_link);
+            case "center":
+                translated_graph_tree_circles_data.push({
+                    id: server_data[server_data.length-1].id,
+                    x: graph_tree_width / 2,
+                    y: graph_tree_height / 2,
+                    r: graph_tree_base_node_r,
+                    angle: cur_color_angle,
+                    dist: 0,
+                });
         }
         
         

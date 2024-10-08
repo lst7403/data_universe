@@ -390,11 +390,34 @@ class graph_tree:
                             "cluster_type": "parent"}]
 
         if cur_node.down_lv:
-            graph_tree_svg_data += [{"id": node.id,
-                            "euclide_dist": calculation.l2(node.center, cur_node.center),
-                            "r_ratio": len(node.index)/circle_ratio_base,
-                            "cluster_type": "child"}
-                            for node in cur_node.down_lv]
+            lv = 0
+            lv_node_counter = 0
+            for node in cur_node.down_lv:
+                if lv % 2 ==0:
+                    if lv_node_counter % 2 == 0:
+                        dx = lv_node_counter/-2
+                    else:
+                        dx = (lv_node_counter+1)/2
+                else:
+                    if lv_node_counter % 2 == 0:
+                        dx = (lv_node_counter+1)/2
+                    else:
+                        dx = lv_node_counter/-2
+                graph_tree_svg_data.append({
+                                        "id": node.id,
+                                        "r_ratio": len(node.index)/circle_ratio_base,
+                                        "dy": lv,
+                                        "dx": dx,
+                                        "cluster_type": "child"
+                                    })
+                if lv_node_counter == lv:
+                    lv += 1
+                    lv_node_counter = 0
+                else:
+                    lv_node_counter += 1
+
+
+
 
         # create circle data
         graph_tree_svg_data += [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
@@ -408,4 +431,11 @@ class graph_tree:
 
         return graph_tree_svg_data
 
-
+    def generate_child_data(node, circle_ratio_base, dy, dx):
+        return {
+            "id": node.id,
+            "r_ratio": len(node.index)/circle_ratio_base,
+            "dy": dy,
+            "dx": dx,
+            "cluster_type": "child"
+        }
