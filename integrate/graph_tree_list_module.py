@@ -371,20 +371,41 @@ class graph_tree:
 
     
     ############################## get data area
-    def get_neighbour_cluster_data(self, node_id, lv_degree=2, query_vector=None):
-        if query_vector is None:
-            query_vector = self.nodes[node_id].center
+    def get_graph_tree_svg_data(self, node_id, lv_degree=2, query_vector=None):
 
-        tmp_discovery_search_res = self.discovery_search(self.nodes[node_id], search_vector=query_vector, lv_degree=2)
+        cur_node = self.nodes[node_id]
+
+        if query_vector is None:
+            query_vector = cur_node.center
+
+        tmp_discovery_search_res = self.discovery_search(self.nodes[node_id], search_vector=query_vector, lv_degree=lv_degree)
 
         circle_ratio_base = len(tmp_discovery_search_res["sorted_nodes"][-1].index)
+
+        graph_tree_svg_data = []
+
+        if cur_node.up_lv:
+            graph_tree_svg_data += [{"id": cur_node.up_lv.id,
+                            "r_ratio": len(cur_node.up_lv.index)/circle_ratio_base,
+                            "cluster_type": "parent"}]
+
+        if cur_node.down_lv:
+            graph_tree_svg_data += [{"id": node.id,
+                            "euclide_dist": calculation.l2(node.center, cur_node.center),
+                            "r_ratio": len(node.index)/circle_ratio_base,
+                            "cluster_type": "child"}
+                            for node in cur_node.down_lv]
+
         # create circle data
-        neighbour_data = [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
+        graph_tree_svg_data += [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
                            "cos_sim": tmp_discovery_search_res["sorted_cos_sim"][i],
                            "euclide_dist": tmp_discovery_search_res["euclide_dist"][i],
-                           "r_ratio": len(tmp_discovery_search_res["sorted_nodes"][i].index)/circle_ratio_base}
+                           "r_ratio": len(tmp_discovery_search_res["sorted_nodes"][i].index)/circle_ratio_base,
+                           "cluster_type": "center" if i == len(tmp_discovery_search_res["sorted_nodes"])-1 else "neighbour"}
                            for i in range(len(tmp_discovery_search_res["sorted_nodes"]))]
         
-        return neighbour_data
+        print(graph_tree_svg_data)
+
+        return graph_tree_svg_data
 
 

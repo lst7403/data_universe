@@ -47,15 +47,76 @@ function circle_size_scaler(x) {
     return (L / denominator) - (L - 2) / 2;
 }
 
-// let circle_size_scaler = d3.scaleLinear()
-//     .domain([0, 1])
-//     .range([0.5, 1])
+function translate_neighbour_data(data, scaler) {
+    let cur_cos_sim = data[i].cos_sim
+    let radian = Math.acos(cur_cos_sim)
+    let cur_angle = rad_2_ang(radian)
+    let special_radian = radian + (cur_cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4)
+
+    let cur_r = graph_tree_base_node_r * circle_size_scaler(data[i].r_ratio);
+    let cur_dist = scaler(data[i].euclide_dist);
+    let [x, y] = cal_x_y(special_radian, cur_dist);
+    circle_data = {
+        id: data[i].id,
+        x: x + graph_tree_width / 2,
+        y: y + graph_tree_height / 2,
+        r: cur_r,
+        angle: cur_angle,
+        dist: cur_dist,
+    }
+
+    let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
+
+    link_data = {
+        id: server_data[i].id,
+        x1: x1 + graph_tree_width / 2,
+        y1: y1 + graph_tree_height / 2,
+        x2: x2 + graph_tree_width / 2,
+        y2: y2 + graph_tree_height / 2,
+        angle: cur_angle,
+    }
+
+    return [circle_data, link_data]
+}
+
+function translate_child_data(data, scaler) {
+
+    let radian = Math.acos(cur_cos_sim)
+    let cur_angle = rad_2_ang(radian)
+    let special_radian = radian + (cur_cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4)
+
+    let cur_r = graph_tree_base_node_r * circle_size_scaler(data[i].r_ratio);
+    let cur_dist = scaler(data[i].euclide_dist);
+    let [x, y] = cal_x_y(special_radian, cur_dist);
+    circle_data = {
+        id: data[i].id,
+        x: x + graph_tree_width / 2,
+        y: y + graph_tree_height / 2,
+        r: cur_r,
+        angle: cur_angle,
+        dist: cur_dist,
+    }
+
+    let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
+
+    link_data = {
+        id: server_data[i].id,
+        x1: x1 + graph_tree_width / 2,
+        y1: y1 + graph_tree_height / 2,
+        x2: x2 + graph_tree_width / 2,
+        y2: y2 + graph_tree_height / 2,
+        angle: cur_angle,
+    }
+
+    return [circle_data, link_data]
+}
+
 
 
 function server_data_to_graph_data(server_data) {
-
+    
     let euclide_scaler = d3.scaleLinear()
-    .domain(d3.extent(server_data.slice(0, -1), d => d.euclide_dist))
+    .domain(d3.extent(server_data.filter(d => d.cluster_type == "neighbour"), d => d.euclide_dist))
     .range([graph_tree_axis_radius + graph_tree_base_node_r * max_circle_ratio + short_tick_len * 2, Math.min(graph_tree_width / 2, graph_tree_height / 2 / Math.cos(Math.PI / 4)) - graph_tree_base_node_r * max_circle_ratio]);
 
     let translated_graph_tree_circles_data = [];
@@ -66,41 +127,24 @@ function server_data_to_graph_data(server_data) {
         id: server_data[server_data.length-1].id,
         x: graph_tree_width / 2,
         y: graph_tree_height / 2,
-        r: graph_tree_base_node_r * circle_size_scaler(server_data[server_data.length-1].r_ratio),
-        angle: 0,
+        r: graph_tree_base_node_r,
+        angle: cur_color_angle,
         dist: 0,
     });
 
     // push other circles
-    for (let i = 0; i < server_data.length-1; i++) {
-        let cur_cos_sim = server_data[i].cos_sim
-        let radian = Math.acos(cur_cos_sim)
-        let cur_angle = rad_2_ang(radian)
-        let special_radian = radian + (cur_cos_sim >= 0 ? -Math.PI / 4 : Math.PI / 4)
+    for (let i = 0; i < server_data.length; i++) {
+        switch (server_data[i].cluster_type){
+            case "neighbour":
+                let [circle, link]  = translate_neighbour_data(data, scaler)
+                translated_graph_tree_circles_data.push(circle);
+                translated_graph_tree_links_data.push(link);
+                break
+            case "child":
 
-        let cur_r = graph_tree_base_node_r * circle_size_scaler(server_data[i].r_ratio);
-        let cur_dist = euclide_scaler(server_data[i].euclide_dist);
-        let [x, y] = cal_x_y(special_radian, cur_dist);
+        }
         
-        translated_graph_tree_circles_data.push({
-            id: server_data[i].id,
-            x: x + graph_tree_width / 2,
-            y: y + graph_tree_height / 2,
-            r: cur_r,
-            angle: cur_angle,
-            dist: cur_dist,
-        });
-
-        let [x1, y1, x2, y2] = cal_x1_y1_x2_y2(special_radian, graph_tree_base_node_r, cur_dist - cur_r);
-
-        translated_graph_tree_links_data.push({
-            id: server_data[i].id,
-            x1: x1 + graph_tree_width / 2,
-            y1: y1 + graph_tree_height / 2,
-            x2: x2 + graph_tree_width / 2,
-            y2: y2 + graph_tree_height / 2,
-            angle: cur_angle,
-        });
+        
     }
     
     return [translated_graph_tree_circles_data, translated_graph_tree_links_data]
