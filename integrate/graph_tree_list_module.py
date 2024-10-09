@@ -381,13 +381,12 @@ class graph_tree:
         tmp_discovery_search_res = self.discovery_search(self.nodes[node_id], search_vector=query_vector, lv_degree=lv_degree)
 
         circle_ratio_base = len(tmp_discovery_search_res["sorted_nodes"][-1].index)
-
-        graph_tree_svg_data = []
-
-        if cur_node.up_lv:
-            graph_tree_svg_data += [{"id": cur_node.up_lv.id,
-                            "r_ratio": len(cur_node.up_lv.index)/circle_ratio_base,
-                            "cluster_type": "parent"}]
+        
+        vertical_data = [{"id": cur_node.up_lv.id,
+                        "r_ratio": len(cur_node.up_lv.index)/circle_ratio_base,
+                        "dy": 0,
+                        "dx": 0,
+                        "cluster_type": "parent"}] if cur_node.up_lv else []
 
         if cur_node.down_lv:
             lv = 0
@@ -403,39 +402,28 @@ class graph_tree:
                         dx = (lv_node_counter+1)/2
                     else:
                         dx = lv_node_counter/-2
-                graph_tree_svg_data.append({
-                                        "id": node.id,
-                                        "r_ratio": len(node.index)/circle_ratio_base,
-                                        "dy": lv,
-                                        "dx": dx,
-                                        "cluster_type": "child"
-                                    })
+                vertical_data.append({
+                                "id": node.id,
+                                "r_ratio": len(node.index)/circle_ratio_base,
+                                "dy": lv,
+                                "dx": dx,
+                                "cluster_type": "child"
+                            })
                 if lv_node_counter == lv:
                     lv += 1
                     lv_node_counter = 0
                 else:
                     lv_node_counter += 1
 
-
-
-
         # create circle data
-        graph_tree_svg_data += [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
+        horizontal_data = [{"id": tmp_discovery_search_res["sorted_nodes"][i].id,
                            "cos_sim": tmp_discovery_search_res["sorted_cos_sim"][i],
                            "euclide_dist": tmp_discovery_search_res["euclide_dist"][i],
                            "r_ratio": len(tmp_discovery_search_res["sorted_nodes"][i].index)/circle_ratio_base,
                            "cluster_type": "center" if i == len(tmp_discovery_search_res["sorted_nodes"])-1 else "neighbour"}
                            for i in range(len(tmp_discovery_search_res["sorted_nodes"]))]
         
-        print(graph_tree_svg_data)
+        print(horizontal_data)
+        print(vertical_data)
 
-        return graph_tree_svg_data
-
-    def generate_child_data(node, circle_ratio_base, dy, dx):
-        return {
-            "id": node.id,
-            "r_ratio": len(node.index)/circle_ratio_base,
-            "dy": dy,
-            "dx": dx,
-            "cluster_type": "child"
-        }
+        return [horizontal_data, vertical_data]

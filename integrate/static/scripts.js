@@ -95,19 +95,19 @@ function sendSliderValues() {
     }, {});
 
     postData(url = "/handle_slider", data = sliderData, postID = "send slider val")
-        .then(data => {render_graph_tree(data.graph_tree_data);});
+        .then(data => {render_graph_tree(data.graph_tree_data, 0);});
 };
 
 // func of recom button clicked
 function handleRecomClick(id, value) {
     document.querySelector('.visual-section').scrollIntoView({ behavior: 'smooth' });
     postData('/handle_recom', { "buttonId": id, "val": value }, postID = "send recom click")
-        .then(data => {render_graph_tree(data.graph_tree_data);});
+        .then(data => {render_graph_tree(data.graph_tree_data, 0);});
 };
 
 // Fetch and render graph_tree data
 getData(url = '/graph_tree_data', getID = "get_graph_tree")
-    .then(data => {render_graph_tree(data);});
+    .then(data => {render_graph_tree(data.graph_tree_data, 0);});
 
 
 // Fetch and render tree data
