@@ -82,19 +82,16 @@ function translate_child_data(data) {
     let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
     let x = graph_tree_width / 2 + graph_tree_base_node_r * 2 * data.dx
     let y = graph_tree_height / 2 + vertical_y_gap + graph_tree_base_node_r * 2 * data.dy
-    let lightness = 80
 
     return [{
         id: data.id,
         x: x,
         y: y,
         r: cur_r,
-        lightness: lightness,
     }, {
         id: data.id,
         source: {x: graph_tree_width / 2, y: graph_tree_height / 2 + graph_tree_base_node_r},
         target: {x: x, y: y - cur_r},
-        lightness: lightness - 20,
     }]
 }
 
@@ -102,19 +99,16 @@ function translate_parent_data(data) {
     let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
     let y = graph_tree_height / 2 - vertical_y_gap
     let x = graph_tree_width / 2
-    let lightness = 40
-
+    
     return [{
         id: data.id,
         x: x,
         y: y,
         r: cur_r,
-        lightness: lightness,
     }, {
         id: data.id,
         source: {x: x, y: graph_tree_height / 2 - graph_tree_base_node_r},
         target: {x: x, y: y + cur_r},
-        lightness: lightness - 20,
     }]
 }
 
@@ -302,7 +296,7 @@ function custom_vertical_data_link_enter(links_update, delay, duration) {
         .attr("d", d => linkGenerator({ source: d.source, target: d.source }))
         .attr("fill", "none")
         .style("opacity", 0)
-        .attr("stroke", d => hsla(cur_color_angle, 100, d.lightness, 0.3))
+        .attr("stroke", hsla(cur_color_angle, 100, 30, 0.4))
             .transition()
             .delay(delay)
             .duration(duration)  // 1 second transition
@@ -317,8 +311,8 @@ function custom_vertical_data_circle_enter(circles_update, delay, duration) {
         .attr("cy", graph_tree_height / 2)
         .attr("r", 0)
         .style("opacity", 0)
-        .attr("fill", d => hsla(cur_color_angle, 100, d.lightness, 0.4))
-        .attr("stroke", d => hsla(cur_color_angle, 100, d.lightness - 20, 0.4))
+        .attr("fill", d => hsla(cur_color_angle, 100, 50, 0.4))
+        .attr("stroke", d => hsla(cur_color_angle, 100, 30, 0.4))
         .attr("stroke-width", 1)
         .attr("class", "vertical_circle")
         // .on("click", function(event, d) {
