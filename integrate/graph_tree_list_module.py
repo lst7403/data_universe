@@ -78,10 +78,11 @@ class calculation:
 
 # graph tree (cluster)
 class graph_tree:
-    def __init__(self, attr_name, X, X_maxmin):
+    def __init__(self, attr_name, X, mata_info, X_maxmin):
         #store necessary val
         self.attr_name = attr_name
         self.X = X
+        self.mata_info = mata_info
         self.X_maxmin = X_maxmin
 
         self.nodes = []
@@ -381,11 +382,14 @@ class graph_tree:
         tmp_discovery_search_res = self.discovery_search(self.nodes[node_id], search_vector=query_vector, lv_degree=lv_degree)
 
         circle_ratio_base = len(tmp_discovery_search_res["sorted_nodes"][-1].index)
+
+        print(cur_node.index[0])
         
         vertical_data = [{"id": cur_node.up_lv.id,
                         "r_ratio": len(cur_node.up_lv.index)/circle_ratio_base,
                         "dy": 0,
                         "dx": 0,
+                        "mata_data": self.mata_info.iloc[cur_node.index[0]].to_dict(),
                         "cluster_type": "parent"}] if cur_node.up_lv else []
 
         if cur_node.down_lv:
@@ -407,6 +411,7 @@ class graph_tree:
                                 "r_ratio": len(node.index)/circle_ratio_base,
                                 "dy": lv,
                                 "dx": dx,
+                                "mata_data": self.mata_info.iloc[node.index[0]].to_dict(),
                                 "cluster_type": "child"
                             })
                 if lv_node_counter == lv:
@@ -420,10 +425,11 @@ class graph_tree:
                            "cos_sim": tmp_discovery_search_res["sorted_cos_sim"][i],
                            "euclide_dist": tmp_discovery_search_res["euclide_dist"][i],
                            "r_ratio": len(tmp_discovery_search_res["sorted_nodes"][i].index)/circle_ratio_base,
+                           "mata_data": self.mata_info.iloc[tmp_discovery_search_res["sorted_nodes"][i].index[0]].to_dict(),
                            "cluster_type": "center" if i == len(tmp_discovery_search_res["sorted_nodes"])-1 else "neighbour"}
                            for i in range(len(tmp_discovery_search_res["sorted_nodes"]))]
         
-        print(horizontal_data)
+        # print(horizontal_data)
         print(vertical_data)
 
         return [horizontal_data, vertical_data]

@@ -43,25 +43,18 @@ body, html {
 /* Middle graph area */
 #middle-area {
     display: grid;
-    grid-template-rows: 1fr 1fr;
-    width: 50vw;
+    grid-template-rows: 1fr 1fr 1fr;
+    width: 60vw;
     height: 100vh;
 }
 
-#graph-area {
-    height: 20vh;
-}
-
 #graph-tree-area {
-    height: 80vh;
+    height: 70vh;
 }
 
 /* Right info area */
 #right-area {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    width: 30vw;
+    width: 20vw;
     height: 100vh;
 }
 
