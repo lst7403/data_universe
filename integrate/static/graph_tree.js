@@ -1,6 +1,8 @@
 let graph_tree_base_node_r = 30;
 let max_circle_ratio = 2;
-let vertical_y_gap = graph_tree_base_node_r * 5
+let vertical_y_gap = graph_tree_base_node_r * 1.5
+let vertical_x_gap = graph_tree_base_node_r * 1.5
+let vertical_center_gap = graph_tree_base_node_r * 4
 
 // // Sample data
 // let got_data = [
@@ -68,6 +70,8 @@ function translate_neighbour_data(data, scaler) {
         r: cur_r,
         angle: cur_color_angle,
         dist: cur_dist,
+        mata_data: data.mata_data,
+        cluster_type: "neighbour",
     }, {
         id: data.id,
         x1: x1 + graph_tree_width / 2,
@@ -80,8 +84,8 @@ function translate_neighbour_data(data, scaler) {
 
 function translate_child_data(data) {
     let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
-    let x = graph_tree_width / 2 + graph_tree_base_node_r * 2 * data.dx
-    let y = graph_tree_height / 2 + vertical_y_gap + graph_tree_base_node_r * 2 * data.dy
+    let x = graph_tree_width / 2 + vertical_x_gap * data.dx
+    let y = graph_tree_height / 2 + vertical_center_gap + vertical_y_gap * data.dy
     let lightness = 80
 
     return [{
@@ -89,6 +93,7 @@ function translate_child_data(data) {
         x: x,
         y: y,
         r: cur_r,
+        mata_data: data.mata_data,
         lightness: lightness,
     }, {
         id: data.id,
@@ -100,7 +105,7 @@ function translate_child_data(data) {
 
 function translate_parent_data(data) {
     let cur_r = graph_tree_base_node_r * circle_size_scaler(data.r_ratio);
-    let y = graph_tree_height / 2 - vertical_y_gap
+    let y = graph_tree_height / 2 - vertical_center_gap
     let x = graph_tree_width / 2
     let lightness = 40
 
@@ -109,6 +114,7 @@ function translate_parent_data(data) {
         x: x,
         y: y,
         r: cur_r,
+        mata_data: data.mata_data,
         lightness: lightness,
     }, {
         id: data.id,
@@ -140,6 +146,8 @@ function server_data_to_graph_data(server_graph_tree_horizontal_data, server_gra
                 r: graph_tree_base_node_r,
                 angle: 0,
                 dist: 0,
+                mata_data: server_graph_tree_horizontal_data[i].mata_data,
+                cluster_type: "center",
             })
         }
     }
@@ -159,13 +167,59 @@ function server_data_to_graph_data(server_graph_tree_horizontal_data, server_gra
         }
     }
 
-    console.log("hi", translated_graph_tree_vertical_circle_data, translated_graph_tree_vertical_link_data)
+    console.log("hi", translated_graph_tree_horizontal_circle_data, translated_graph_tree_horizontal_links_data)
 
     return [translated_graph_tree_horizontal_circle_data,
         translated_graph_tree_horizontal_links_data,
         translated_graph_tree_vertical_circle_data,
         translated_graph_tree_vertical_link_data]
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function move_to_center(id, duration) {
+    return new Promise((resolve) => {
+        path_select = graph_tree_svg.select(`#path${id}`)
+        line_select = graph_tree_svg.select(`#link${id}`)
+
+        graph_tree_svg.selectAll(`#path${id}, #link${id}, circle.center, text.center`)
+            .transition()
+            .duration(duration)
+            .style("opacity", 0)
+            .remove()
+        
+
+        // // Remove the .center elements separately
+        // graph_tree_svg.select("circle.center")
+        //     .transition()
+        //     .duration(duration)
+        //     .style("opacity", 0)
+        //     .remove()
+
+        // graph_tree_svg.select("text.center")
+        //     .transition()
+        //     .duration(duration)
+        //     .style("opacity", 0)
+        //     .remove()
+
+        graph_tree_svg.select(`#circle${id}`)
+            .transition()
+            .duration(duration)
+            .attr("cx", graph_tree_width/2)
+            .attr("cy", graph_tree_height/2)
+            .attr("r", graph_tree_base_node_r)
+            .classed("center", 1)
+
+        graph_tree_svg.select(`#text${id}`)
+            .transition()
+            .duration(duration)
+            .attr("x", graph_tree_width/2)
+            .attr("y", graph_tree_height/2)
+            .classed("center", 1)
+            .on("end", resolve)
+    })
+}
+
 
 function custom_exit(updated_data, duration) {
     return updated_data.exit()
@@ -212,6 +266,7 @@ function custom_text_update(texts_update, delay, duration) {
 function custom_link_enter(links_update, delay, duration) {
     links_update.enter()
         .append("line")
+        .attr("id", d => "link"+d.id)
         .attr("x1", d => d.x1)
         .attr("y1", d => d.y1)
         .attr("x2", d => d.x2)
@@ -228,6 +283,7 @@ function custom_link_enter(links_update, delay, duration) {
 function custom_circle_enter(circles_update, delay, duration) {
     circles_update.enter()
         .append("circle")
+        .attr("id", d => "circle"+d.id)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
         .attr("r", d => d.r)
@@ -235,8 +291,10 @@ function custom_circle_enter(circles_update, delay, duration) {
         .attr("stroke", d => hsla((d.angle + cur_color_angle) % 360, 100, 30, 0.4))
         .attr("stroke-width", 1)
         .attr("class", "horizontal_circle")
+        .classed("center", d => d.cluster_type == "center" ? 1 : 0)
         .on("click", function(event, d) {
-            graph_tree_circle_clicked(d.id)
+            move_to_center(d.id, circle_transition_time)
+            .then(graph_tree_circle_clicked(d.id))
         })
             .style("opacity", 0)  // Start invisible
             .transition()
@@ -248,9 +306,11 @@ function custom_circle_enter(circles_update, delay, duration) {
 function custom_text_enter(texts_update, delay, duration) {
     texts_update.enter()
         .append("text")
+        .attr("id", d => "text"+d.id)
         .attr("x", d => d.x)
         .attr("y", d => d.y)
         .attr("class", "horizontal_label cluster_label")
+        .classed("center", d => d.cluster_type == "center" ? 1 : 0)
         .style("font-size", d => Math.max(14, d.r*0.3))
         .text(d => d.id)
         .on("click", function(event, d) {
@@ -261,6 +321,28 @@ function custom_text_enter(texts_update, delay, duration) {
             .delay(delay)
             .duration(duration)
             .style("opacity", 1);  // Fade in
+}
+
+function show_horizontal_res(data, container1id, container2id, condition_for_container1) {
+
+    container1 = d3.select(`#${container1id}`)
+    container2 = d3.select(`#${container2id}`)
+
+    // Define a template function
+    const template = d => `
+      <div style="margin: 5px; padding: 5px; border: 1px solid #ccc;">
+        <h4>${d.mata_data.track_name}</h4>
+        <p>${d.mata_data.artist_name}</p>
+      </div>`;
+
+      data.forEach(data => {
+        const targetContainer = data.cluster_type === condition_for_container1 ? container1 : container2;
+  
+        targetContainer
+          .append("div")
+          .html(template(data)); // Use the template function for each item
+      });
+  
 }
 
 function update_horizontal_circles_links(circle_data, link_data, delay) {
@@ -298,6 +380,7 @@ let linkGenerator = d3.linkVertical()
 function custom_vertical_data_link_enter(links_update, delay, duration) {
     links_update.enter()
         .append("path")
+        .attr("id", d => "path"+d.id)
         .attr("class", "vertical_link")
         .attr("d", d => linkGenerator({ source: d.source, target: d.source }))
         .attr("fill", "none")
@@ -313,6 +396,7 @@ function custom_vertical_data_link_enter(links_update, delay, duration) {
 function custom_vertical_data_circle_enter(circles_update, delay, duration) {
     circles_update.enter()
         .append("circle")
+        .attr("id", d => "circle"+d.id)
         .attr("cx", graph_tree_width / 2)
         .attr("cy", graph_tree_height / 2)
         .attr("r", 0)
@@ -336,6 +420,7 @@ function custom_vertical_data_circle_enter(circles_update, delay, duration) {
 function custom_vertical_data_text_enter(texts_update, delay, duration) {
     texts_update.enter()
         .append("text")
+        .attr("id", d => "text"+d.id)
         .attr("x", graph_tree_width / 2)
         .attr("y", graph_tree_height / 2)
         .text(d => d.id)
@@ -353,6 +438,23 @@ function custom_vertical_data_text_enter(texts_update, delay, duration) {
         .attr("y", d => d.y); // Transition to the new y position
 }
 
+function custom_vertical_data_link_update(links_update, delay, duration) {
+    links_update
+        .transition()
+        .delay(delay)
+        .duration(duration)  // 1 second transition
+        .attr("d", d => linkGenerator({ source: d.source, target: d.target })) 
+}
+
+function custom_vertical_data_circle_update(circles_update, delay, duration) {
+    circles_update
+        .transition()
+        .delay(delay)
+        .duration(duration)
+        .attr("r", d => d.r)
+        .attr("fill", d => hsla(cur_color_angle, 100, d.lightness, 0.4))
+        .attr("stroke", d => hsla(cur_color_angle, 100, d.lightness - 20, 0.4));
+}
 
 
 function update_vertical_circles_links(circle_data, link_data, delay) {
@@ -373,13 +475,15 @@ function update_vertical_circles_links(circle_data, link_data, delay) {
     let update_delay = (circles_exited.size() > 0 ? delay + circle_transition_time : delay)
     let enter_delay = (circles_update.size() > 0 ? update_delay + circle_transition_time : update_delay)
 
-    custom_link_update(links_update, update_delay, circle_transition_time)
-    custom_circle_update(circles_update, update_delay, circle_transition_time)
-    custom_text_update(texts_update, update_delay, circle_transition_time)
+    custom_vertical_data_link_update(links_update, update_delay, circle_transition_time)
+    custom_vertical_data_circle_update(circles_update, update_delay, circle_transition_time)
+    // custom_text_update(texts_update, update_delay, circle_transition_time)
 
     custom_vertical_data_link_enter(links_update, enter_delay, circle_transition_time)
     custom_vertical_data_circle_enter(circles_update, enter_delay, circle_transition_time)
     custom_vertical_data_text_enter(texts_update, enter_delay, circle_transition_time)
+
+    show_res(circle_data, "dissim_res", "sim_res", )
     
 }
 
@@ -389,10 +493,10 @@ function render_graph_tree(server_graph_tree_data, delay) {
         translated_graph_tree_vertical_circle_data,
         translated_graph_tree_vertical_link_data] = server_data_to_graph_data(server_graph_tree_data.graph_tree_horizontal_data, server_graph_tree_data.graph_tree_vertical_data);
     
-        // console.log("new_graph_tree_data", translated_graph_tree_horizontal_circle_data,
-        // translated_graph_tree_horizontal_links_data,
-        // translated_graph_tree_vertical_circle_data,
-        // translated_graph_tree_vertical_link_data)
+        console.log("new_graph_tree_data", translated_graph_tree_horizontal_circle_data,
+        translated_graph_tree_horizontal_links_data,
+        translated_graph_tree_vertical_circle_data,
+        translated_graph_tree_vertical_link_data)
 
     update_horizontal_circles_links(translated_graph_tree_horizontal_circle_data, translated_graph_tree_horizontal_links_data, delay)
     update_vertical_circles_links(translated_graph_tree_vertical_circle_data, translated_graph_tree_vertical_link_data, delay)
@@ -400,5 +504,5 @@ function render_graph_tree(server_graph_tree_data, delay) {
 
 function graph_tree_circle_clicked(id) {
     postData('/graph_tree_circle_click', { "id": id }, postID = "send circle click")
-        .then(data => {render_graph_tree(data.graph_tree_data, 0);});
+        .then(data => {render_graph_tree(data.graph_tree_data, circle_transition_time)});
 }
